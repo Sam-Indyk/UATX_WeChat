@@ -1,24 +1,24 @@
 # CLAUDE.md
 
-This file gives Claude (and Cursor, and any other coding agent) context about this repo so it generates consistent code across sessions and across teammates. Read this first when starting work.
+Context for any coding agent (Claude, Cursor, etc.) and any teammate picking up the project. Read this first when starting work.
 
-> **First-time setup:** these are starting conventions. Both teammates should read through, edit anything you disagree with, and commit the final version together before either of you starts writing features. Once it's committed, treat it as the agreement.
+> **How we work on this project.** We work sequentially, one person at a time, mostly driving via Claude. Whoever's next reads the **Runway** section at the bottom, picks up the next undone step, finishes it, ticks it off, and commits. Treat the runway as the source of truth for "what's next."
 
 ## What this project is
 
-A web app for UATX students to buy and sell used textbooks from each other. The defining feature is course-history-based matching: when a freshman needs the book for PHIL 101, the app surfaces listings from upperclassmen who took PHIL 101 in past semesters. Buyers and sellers chat in-app, scoped to a specific listing.
+A web app for UATX students to buy and sell used textbooks from each other. The defining feature is **course-history-based matching**: when a freshman needs the book for PHIL 101, the app surfaces listings from upperclassmen who took PHIL 101 in past semesters. Buyers and sellers chat in-app, scoped to a specific listing.
 
-This is a 3-week final project for UATX's Software Engineering course (Spring 2026). Targeting silver tier, with gold reachable if everything goes well.
+This is the 3-week final project for UATX's Software Engineering course (Spring 2026). **Target tier: Gold.** Bronze is the floor.
 
 ## Stack
 
-- **Backend:** Python 3.12, FastAPI, SQLAlchemy (ORM), Postgres
-- **Frontend:** TypeScript, React, Vite, React Router for routing
-- **Database:** Postgres hosted on Supabase
-- **Auth:** Supabase Auth (JWT-based; FastAPI verifies tokens server-side)
-- **Hosting:** Railway. FastAPI serves the built React bundle at `/` and handles API requests at `/api/*` — one service, one URL, no CORS.
-- **Tests:** pytest (backend), Vitest (frontend)
-- **CI:** GitHub Actions, runs on every push and PR, blocks merge to `main` on failure
+- **Backend:** Python 3.12, FastAPI, SQLAlchemy (ORM), Alembic (migrations), Postgres.
+- **Frontend:** TypeScript, React, Vite, React Router, Tailwind.
+- **Database:** Postgres. Locally via Docker Compose. In production via Supabase Postgres (we use Supabase for the DB only — not for auth).
+- **Auth:** Clerk with Google sign-in, restricted to `@student.uaustin.org`. Clerk issues a JWT; FastAPI verifies it server-side against Clerk's JWKS.
+- **Hosting:** Railway. FastAPI serves the built React bundle at `/` and handles API requests at `/api/*` — one service, one URL, no CORS in prod.
+- **Tests:** pytest (backend), Vitest (frontend).
+- **CI:** GitHub Actions. Runs on every push and PR. Blocks merge to `main` on failure. Deploy gated on green.
 
 ## Repo layout
 
@@ -27,134 +27,212 @@ This is a 3-week final project for UATX's Software Engineering course (Spring 20
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI entrypoint
-│   │   ├── routers/             # one file per resource (listings.py, messages.py, ...)
+│   │   ├── config.py            # settings loaded from env
+│   │   ├── db.py                # SQLAlchemy engine + session
+│   │   ├── auth.py              # Clerk JWT verification dependency
 │   │   ├── models/              # SQLAlchemy models
 │   │   ├── schemas/             # Pydantic request/response models
-│   │   ├── db.py                # session, engine
-│   │   └── auth.py              # JWT verification dependency
+│   │   └── routers/             # one file per resource
+│   ├── alembic/                 # migrations
 │   ├── tests/                   # pytest tests
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
+│   │   ├── main.tsx
+│   │   ├── App.tsx
 │   │   ├── pages/               # top-level routed components
 │   │   ├── components/          # reusable UI
 │   │   ├── hooks/               # custom React hooks
-│   │   ├── lib/                 # api client, supabase client, utilities
-│   │   └── App.tsx
+│   │   └── lib/                 # api client, clerk helpers, utilities
 │   ├── package.json
 │   └── vite.config.ts
 ├── .github/workflows/
-│   └── test.yml                 # CI workflow
-├── SCHEMA.md                    # source of truth for the data model
+│   └── test.yml                 # CI
+├── docker-compose.yml           # local Postgres
+├── SCHEMA.md                    # the data model, in words
 ├── CLAUDE.md
 └── README.md
 ```
 
-## Team ownership
-
-Two people. Ownership is by feature seam, end-to-end (table → API → frontend → tests).
-
-- **Person A — marketplace half:** listings (create/browse/search/detail), the course-matching algorithm and feed. Files in `routers/listings.py`, `routers/matching.py`, plus the listings/browse/detail pages on the frontend.
-- **Person B — people half:** auth integration, user profiles, course-history capture, messaging between buyer and seller. `routers/auth.py`, `routers/profiles.py`, `routers/messages.py`, plus the corresponding frontend pages and the chat UI.
-
-Shared boundaries (touch carefully, talk first):
-- `users` / `profiles` table (Person B owns, A reads via FK)
-- `listings` table (Person A owns, B's messages table FKs into it)
-- `enrollments` / course-history shape (Person B captures, A's matching reads)
-
-When in doubt about whether you can touch something: if it's on the other person's list above, ask before changing it.
-
 ## Backend conventions
 
 - All API routes live under `/api/`. The React app is served at `/`.
-- One router file per resource. Routes follow REST-ish patterns: `GET /api/listings`, `GET /api/listings/{id}`, `POST /api/listings`, etc.
-- Every request that touches user-scoped data goes through the JWT auth dependency. Get the user from the verified JWT — never from a header, query param, or request body.
+- One router file per resource. Routes follow REST-ish patterns.
+- Every user-scoped route goes through the Clerk JWT auth dependency (`auth.require_user`). Get the user from the verified JWT — never from a header, query param, or request body.
 - Pydantic models for every request and response. Don't return SQLAlchemy models directly to the client.
-- Error responses are FastAPI `HTTPException` with a status code and a `detail` string. Validation errors come back as 422 from Pydantic automatically.
+- Error responses are FastAPI `HTTPException` with a status and `detail`. Validation errors come back as 422 from Pydantic automatically.
 - Database access goes through a `get_db()` dependency that yields a session and closes it after the request.
-- Don't write raw SQL unless there's a real reason (e.g. an aggregation that's awkward in the ORM). When you do, parameterize — never f-string user input into a query.
+- Don't write raw SQL unless there's a real reason. When you do, parameterize.
 
 ## Frontend conventions
 
-- TypeScript strict mode. No `any` without a comment explaining why.
-- Every fetch has a visible loading state AND a visible error state. This is graded and also just correct.
-- Data fetching: plain `fetch` wrapped in a small `api` client in `lib/api.ts`. Promote to React Query if/when we hit refetch/cache complexity — not before.
+- TypeScript strict mode. No `any` without a comment.
+- Every fetch has a visible loading state AND a visible error state.
+- Data fetching: plain `fetch` wrapped in `lib/api.ts`, which attaches the Clerk token automatically. Promote to React Query only if we hit real refetch/cache complexity.
 - Routing via React Router. URLs are bookmarkable. Refreshing keeps you where you are. Back button works.
 - Functional components with hooks. No class components.
-- Tailwind for styling. Prefer utility classes; bail to a component CSS file if a piece gets gnarly.
-- Forms: controlled components. Disable the submit button while the request is in flight.
+- Tailwind for styling.
+- Forms: controlled components. Disable submit while in flight.
 
 ## Database conventions
 
 - snake_case for tables and columns.
-- Real foreign keys with `ON DELETE` behavior chosen explicitly (usually `CASCADE` for child rows, `RESTRICT` for parents that shouldn't disappear).
-- `NOT NULL` is the default; only nullable when there's a real reason, and document why in the column comment.
-- Every table has `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`. Tables that mutate get `updated_at TIMESTAMPTZ` too.
-- UUIDs for primary keys (matches Supabase Auth user IDs; keeps the whole schema consistent).
-- Length limits on text columns where appropriate (titles, names, body text).
-- See `SCHEMA.md` for the actual table definitions — don't duplicate them here.
+- Real foreign keys with `ON DELETE` chosen explicitly.
+- `NOT NULL` is the default; nullable only when there's a real reason.
+- Every table has `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`. Mutable tables also have `updated_at TIMESTAMPTZ`.
+- UUIDs for primary keys, except `users.id` which is the Clerk user ID (a string like `user_2abc...`). This makes JWT verification → DB lookup trivial.
+- See `SCHEMA.md` for table definitions.
 
 ## Tests
 
-- Backend: pytest, in `backend/tests/`, files named `test_*.py`. Each test is independent — sets up its data, asserts, cleans up.
+- Backend: pytest in `backend/tests/`. Each test independent — sets up, asserts, cleans up.
+- Auth in tests: override the `require_user` dependency to inject a fake user. Don't mock Clerk's JWKS.
 - Frontend: Vitest, tests next to the file they test as `*.test.ts(x)`.
-- Cover the happy path AND at least one edge case for every nontrivial endpoint. Edge cases that actually matter here: not-logged-in, logged-in-as-wrong-user, missing required fields, conflicting state (e.g. buying your own listing, messaging on a sold listing).
-- Don't pile up five tests for trivial CRUD. Spend the test budget on the logic that has real failure modes — the matching algorithm, the messaging state, auth gating.
-
-## Git workflow
-
-- `main` is protected. Direct pushes blocked. Merge via PR only.
-- Feature branches: `feat/<short-description>` or `fix/<short-description>`.
-- PRs are small, scoped, and described in a sentence or two: what changes, why, what to look at first.
-- CI must pass before you ask the other person to review. Look at the red X yourself first.
-- Real commit history from both people. Squash if you want, but don't let one person commit a week's worth of the other person's work.
+- Cover happy path AND at least one edge case for every nontrivial endpoint.
 
 ## Things NOT to do
 
-- Don't use SQLite in dev. Connect to the cloud Postgres so dev and prod match.
-- Don't use the `X-Username` header pattern from A2 / A4. User identity comes from the verified JWT, full stop.
-- Don't denormalize fields that should be foreign keys. No `seller_name` on `listings` — join to `users`.
-- Don't put secrets in the repo. Supabase keys, DB URLs, JWT secrets all go in environment variables — Railway dashboard for prod, GitHub Actions secrets for CI, local `.env` files (gitignored) for dev.
-- Don't `print()` for debugging in committed code. Use logging or remove it before the PR.
-- Don't skip loading/error states on a fetch. "I'll add it later" means "I'll forget."
-- Don't write a test after the feature ships and call it covered. A real test could have failed and caught a real bug.
-- Don't change a shared table (`users`, `listings`, `enrollments`) without talking to the other person first.
+- Don't use SQLite, even for local dev. Use Docker Postgres so dev and prod match.
+- Don't use the `X-Username` header pattern. User identity = verified Clerk JWT.
+- Don't denormalize fields that should be foreign keys.
+- Don't put secrets in the repo.
+- Don't `print()` for debugging in committed code.
+- Don't skip loading/error states on a fetch.
 
 ## Local development
 
-```bash
-# Backend
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env  # fill in DATABASE_URL, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET
-uvicorn app.main:app --reload
+Prereqs: Python 3.12, Node 20+, Docker Desktop.
 
-# Frontend (separate terminal)
+```bash
+# 1. Bring up Postgres
+docker compose up -d
+
+# 2. Backend
+cd backend
+python -m venv .venv
+.venv\Scripts\activate           # Windows
+pip install -r requirements.txt
+copy .env.example .env           # fill in CLERK_* values
+alembic upgrade head             # apply migrations
+uvicorn app.main:app --reload    # http://localhost:8000
+
+# 3. Frontend (separate terminal)
 cd frontend
 npm install
-cp .env.example .env  # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
-npm run dev
+copy .env.example .env           # fill in VITE_CLERK_PUBLISHABLE_KEY, VITE_API_URL=http://localhost:8000
+npm run dev                      # http://localhost:5173
 
 # Tests
-cd backend && pytest
-cd frontend && npm run test
+cd backend
+pytest
+cd frontend
+npm run test
 ```
 
-## The nontrivial piece (Person A owns)
+## Auth: how Clerk fits
 
-The course-matching algorithm lives in `backend/app/routers/matching.py`. When called for a logged-in user, it:
+- Clerk owns sign-in UI and the Google OAuth dance. We use `<SignIn />` from `@clerk/clerk-react`.
+- Sign-in restricted to `@student.uaustin.org` via Clerk's restriction settings.
+- Every request to `/api/*` sends `Authorization: Bearer <clerk-jwt>`.
+- Backend verifies the JWT against Clerk's JWKS. On success it extracts the Clerk user ID (`sub`) and uses that as `users.id`.
+- First request from a new Clerk user upserts the `users` row (display name, email, avatar URL from JWT claims).
 
-1. Reads the user's current enrolled courses
-2. Looks up the required books for those courses from `course_books`
-3. Finds open listings for those books
-4. Filters out listings posted by the viewing user themselves
-5. Ranks the results (see open questions below)
-6. Returns the ranked list
+## The nontrivial pieces
 
-**Open design decisions, to be settled by end of week 1:**
-- Book identity: edition-aware match, or fuzzy on title + author?
-- Ranking signal: recency of the seller having taken the course, listing freshness, price, something else? What's the tiebreaker?
-- Source of "courses I'm enrolled in": Populi API (if we can get access), or self-report at signup?
+### Piece 1 (bronze): course-matching algorithm
 
-Document the final answers in this section once decided. At the demo, Person A should be able to walk through how this works without notes.
+`backend/app/routers/matching.py` → `match_listings_for_user`. For a signed-in user:
+
+1. Read the user's current enrollments (`is_current = true`).
+2. Find active listings whose `course_id` is in that set.
+3. Exclude the user's own listings.
+4. Rank by:
+   - **Primary:** seller's "course recency" — how recently the seller was enrolled in the same course. More recent = higher rank (book more likely the current edition).
+   - **Tiebreaker 1:** listing freshness (newer first).
+   - **Tiebreaker 2:** lower price first.
+5. Return the ranked list with seller display name and a rationale string ("Seller took PHIL 101 in Fall 2024").
+
+Edge cases that matter: user has no current enrollments, no listings match, all matches are the user's own.
+
+### Piece 2 (silver): TBD
+
+Candidates:
+- **Price suggestion** when posting a listing, based on past sold listings of the same book + condition.
+- **Conversation state machine** — listings move through `active → reserved → sold`; conversations move through `inquiry → offer → counter → accepted/declined`.
+- **Graduating-seller feed** — listings whose seller has no current enrollments but a heavy course history. Decay function.
+
+Pick one when we get to silver.
+
+### Gold custom features (need 2)
+
+Brainstorming bucket:
+- Saved searches with notifications.
+- Seller reputation after completed sales.
+- Bundle deals.
+- A "wanted" board.
+
+Pick two when we get there.
+
+### Gold "pick one"
+
+Most likely **real-time-ish chat via polling**. Lowest risk, fits the product. Alternative: full Playwright e2e suite.
+
+## Runway
+
+Read this section, find the next undone step, do it, tick it off, commit. Acceptance criteria below each step.
+
+Status: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
+
+---
+
+### Phase 0: Foundation
+
+- [x] **CLAUDE.md and README rewritten as runway.** Reflect Clerk + Supabase Postgres + Docker local. SCHEMA.md committed.
+- [x] **Docker Compose for local Postgres.** `docker compose up -d` brings up Postgres 16 on `localhost:5432`.
+- [x] **Backend scaffold runs.** `uvicorn app.main:app --reload` boots, `GET /api/health` returns 200.
+- [x] **SQLAlchemy models + initial Alembic migration.** All tables in SCHEMA.md exist after `alembic upgrade head`.
+- [x] **Clerk JWT auth dependency.** `require_user` fetches and caches JWKS, verifies tokens, upserts and returns the DB user.
+- [x] **First routers + Pydantic schemas.** `me`, `courses`, `listings`, `messages`, `matching`.
+- [x] **Pytest scaffold with dependency-override auth.** ~9 tests covering main paths + edge cases.
+- [x] **Frontend scaffold runs.** `npm run dev` boots Vite on `:5173`. Tailwind compiles. React Router renders pages.
+- [x] **Clerk integration on the frontend.** `<ClerkProvider>` at the root, sign-in page, protected routes, `getToken()` plumbed into the api client.
+- [x] **Sign-in → onboarding → listings stubbed.** Pages render with loading and error states.
+- [x] **One Vitest test.**
+- [x] **GitHub Actions CI.** Runs backend pytest + frontend vitest on every push.
+
+### Phase 1: Bronze (next)
+
+- [ ] **Get Clerk keys.** Create a Clerk app, enable Google as the only social provider, configure the `@student.uaustin.org` email restriction, copy `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_JWKS_URL` into `.env` files. ~10 min.
+- [ ] **Create Supabase Postgres project.** Get the pooled connection string, save it somewhere private. We'll use it on Railway.
+- [ ] **Seed UATX courses.** Script (or data migration) populating the `courses` table with the actual UATX catalog.
+- [ ] **Onboarding flow polished.** After first sign-in, redirect new users to `/onboarding` where they pick current courses. Persisted to `enrollments` with `is_current = true`.
+- [ ] **Listings: browse + filter by course.** List page hits `GET /api/listings?course_id=...`, clean grid, loading + error states.
+- [ ] **Listings: detail page.** Full info, seller name, "Message seller" button.
+- [ ] **Listings: create.** Form posts to `POST /api/listings`. (Photo upload via Supabase Storage is silver/gold.)
+- [ ] **Messaging: inbox + thread.** Inbox lists conversations; thread shows messages with a send box. No polling yet.
+- [ ] **Matching: live at `/match`.** Calls `GET /api/match`, renders ranked feed.
+- [ ] **Tests: top up to ~10.** At least one edge-case test per nontrivial endpoint.
+- [ ] **Deploy to Railway.** FastAPI serves the React bundle at `/`. One URL. DATABASE_URL → Supabase. Clerk production keys.
+- [ ] **README "Live URL" filled in. Bronze achieved.**
+
+### Phase 2: Silver
+
+- [ ] Pick + build the second nontrivial piece.
+- [ ] Optimistic updates on at least one action (posting a listing or sending a message), with rollback.
+- [ ] Confirm bookmarkable URLs and back button work end to end.
+- [ ] Visual design pass with Tailwind: type scale, color palette, spacing, deliberate components.
+- [ ] Extra tests for silver behavior or one e2e-ish test (Playwright).
+
+### Phase 3: Gold
+
+- [ ] Mobile pass. Every page works on phone width. No horizontal scrolling. Tap targets ≥ 44px.
+- [ ] Pick-one: real-time chat via polling (recommended), or Playwright e2e, or design with a point of view.
+- [ ] Custom feature 1: TBD.
+- [ ] Custom feature 2: TBD.
+- [ ] README updated with gold-tier description.
+
+---
+
+## Note on team spec
+
+The Final Project spec requires 2-3 people. We work sequentially via Claude, but **commits must come from real teammates** for the project to count. Coordinate so every teammate has meaningful commits in `git log` by demo day.
