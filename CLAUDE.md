@@ -204,7 +204,9 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 ### Phase 1: Bronze (next)
 
 - [x] **Get Clerk keys.** Clerk app `related-sunbird-55` created, Google enabled, sign-in open to all Google accounts (no email-domain restriction). Keys in `frontend/.env` and `backend/.env`.
-- [ ] **Create Supabase Postgres project.** Get the pooled connection string, save it somewhere private. We'll use it on Railway.
+- [x] **Create Supabase Postgres project.** `uatx-wechat` project on aws-1-us-west-1, pooler URL in Railway env vars, migrations applied (6 tables + alembic_version).
+- [x] **Deploy to Railway.** Dockerfile + railway.toml, FastAPI serves the React bundle at `/`. Live at https://uatxwechat-production.up.railway.app. CORS off in prod (same-origin). Migrations run on container start.
+- [x] **README "Live URL" filled in.**
 - [ ] **Seed UATX courses.** Script (or data migration) populating the `courses` table with the actual UATX catalog.
 - [ ] **Onboarding flow polished.** After first sign-in, redirect new users to `/onboarding` where they pick current courses. Persisted to `enrollments` with `is_current = true`.
 - [ ] **Listings: browse + filter by course.** List page hits `GET /api/listings?course_id=...`, clean grid, loading + error states.
@@ -213,8 +215,7 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 - [ ] **Messaging: inbox + thread.** Inbox lists conversations; thread shows messages with a send box. No polling yet.
 - [ ] **Matching: live at `/match`.** Calls `GET /api/match`, renders ranked feed.
 - [ ] **Tests: top up to ~10.** At least one edge-case test per nontrivial endpoint.
-- [ ] **Deploy to Railway.** FastAPI serves the React bundle at `/`. One URL. DATABASE_URL → Supabase. Clerk production keys.
-- [ ] **README "Live URL" filled in. Bronze achieved.**
+- [ ] **Bronze achieved** — when all of the above are ticked.
 
 ### Phase 2: Silver
 
