@@ -75,12 +75,18 @@ def _verify_clerk_jwt(token: str) -> dict[str, Any]:
 
 
 def _enforce_email_domain(email: str) -> None:
+    # Empty allowlist = open to all domains. We let in non-UATX emails so
+    # incoming students without an official @student.uaustin.org address
+    # can still buy books from upperclassmen.
+    allowed = settings.allowed_domains_list
+    if not allowed:
+        return
     if "@" not in email:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Email missing domain"
         )
     domain = email.rsplit("@", 1)[1].lower()
-    if domain not in settings.allowed_domains_list:
+    if domain not in allowed:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Email domain {domain!r} not allowed",

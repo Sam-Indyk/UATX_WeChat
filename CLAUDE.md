@@ -15,7 +15,7 @@ This is the 3-week final project for UATX's Software Engineering course (Spring 
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy (ORM), Alembic (migrations), Postgres.
 - **Frontend:** TypeScript, React, Vite, React Router, Tailwind.
 - **Database:** Postgres. Locally via Docker Compose. In production via Supabase Postgres (we use Supabase for the DB only — not for auth).
-- **Auth:** Clerk with Google sign-in, restricted to `@student.uaustin.org`. Clerk issues a JWT; FastAPI verifies it server-side against Clerk's JWKS.
+- **Auth:** Clerk with Google sign-in. Open to any Google account (we don't restrict to `@student.uaustin.org` because incoming students who haven't been issued their school email yet should still be able to buy books). Clerk issues a JWT; FastAPI verifies it server-side against Clerk's JWKS. If we later want a domain restriction we can re-enable it by setting `ALLOWED_EMAIL_DOMAINS` on the backend.
 - **Hosting:** Railway. FastAPI serves the built React bundle at `/` and handles API requests at `/api/*` — one service, one URL, no CORS in prod.
 - **Tests:** pytest (backend), Vitest (frontend).
 - **CI:** GitHub Actions. Runs on every push and PR. Blocks merge to `main` on failure. Deploy gated on green.
@@ -132,7 +132,8 @@ npm run test
 ## Auth: how Clerk fits
 
 - Clerk owns sign-in UI and the Google OAuth dance. We use `<SignIn />` from `@clerk/clerk-react`.
-- Sign-in restricted to `@student.uaustin.org` via Clerk's restriction settings.
+- Sign-in is open to any Google account — we explicitly do NOT restrict to `@student.uaustin.org`, because incoming students who don't have their school email yet still need to buy books from upperclassmen.
+- The backend has an `ALLOWED_EMAIL_DOMAINS` env var that, if set, enforces a server-side allowlist. Leaving it empty (the default) means any email is fine.
 - Every request to `/api/*` sends `Authorization: Bearer <clerk-jwt>`.
 - Backend verifies the JWT against Clerk's JWKS. On success it extracts the Clerk user ID (`sub`) and uses that as `users.id`.
 - First request from a new Clerk user upserts the `users` row (display name, email, avatar URL from JWT claims).
@@ -202,7 +203,7 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 
 ### Phase 1: Bronze (next)
 
-- [ ] **Get Clerk keys.** Create a Clerk app, enable Google as the only social provider, configure the `@student.uaustin.org` email restriction, copy `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_JWKS_URL` into `.env` files. ~10 min.
+- [x] **Get Clerk keys.** Clerk app `related-sunbird-55` created, Google enabled, sign-in open to all Google accounts (no email-domain restriction). Keys in `frontend/.env` and `backend/.env`.
 - [ ] **Create Supabase Postgres project.** Get the pooled connection string, save it somewhere private. We'll use it on Railway.
 - [ ] **Seed UATX courses.** Script (or data migration) populating the `courses` table with the actual UATX catalog.
 - [ ] **Onboarding flow polished.** After first sign-in, redirect new users to `/onboarding` where they pick current courses. Persisted to `enrollments` with `is_current = true`.
