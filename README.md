@@ -20,7 +20,7 @@ A marketplace and chat app for UATX students to buy and sell used textbooks from
 | Backend | FastAPI + SQLAlchemy + Alembic |
 | Frontend | React + TypeScript + Vite + Tailwind + React Router |
 | Database | Postgres — local via Docker, production on Supabase |
-| Auth | Clerk (Google sign-in, restricted to `@student.uaustin.org`) |
+| Auth | Clerk (Google sign-in, open to all Google accounts) |
 | Hosting | Railway (FastAPI serves the React build at `/`, API at `/api/*`) |
 | Tests | pytest (backend), Vitest (frontend) |
 | CI | GitHub Actions |
@@ -79,7 +79,7 @@ Commits from every teammate are required by the spec — coordinate so `git log`
 
 ## Design decisions (initial)
 
-- **Clerk over Supabase Auth** — UATX students all have Google accounts on `@student.uaustin.org`; Clerk's Google-sign-in + email-domain restriction made this a 10-minute setup. Supabase still hosts our Postgres.
+- **Clerk over Supabase Auth** — UATX students all have Google accounts; Clerk's Google-sign-in flow made this a 10-minute setup. We deliberately do NOT restrict to `@student.uaustin.org` — incoming students who don't have their school email yet need to be able to buy books from upperclassmen. Supabase still hosts our Postgres.
 - **Docker Postgres locally** — keeps local dev identical to prod (same Postgres version, same SQL features) without paying for a cloud dev DB.
 - **`users.id` is the Clerk user ID, not a generated UUID** — every JWT carries that ID as `sub`, so verification → DB lookup is a single primary-key fetch.
 
