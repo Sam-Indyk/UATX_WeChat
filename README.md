@@ -2,10 +2,11 @@
 
 A marketplace and chat app for UATX students to buy and sell used textbooks from each other. The defining feature is course-history-based matching: when you need the book for PHIL 101, the app surfaces listings from upperclassmen who took PHIL 101.
 
-- **Live URL:** TBD (not yet deployed)
+- **Live URL:** https://uatxwechat-production.up.railway.app
 - **GitHub:** https://github.com/Sam-Indyk/UATX_WeChat
 - **Tier targeted:** Gold
-- **Status:** Phase 0 (foundation scaffolded). See [CLAUDE.md](CLAUDE.md) → Runway for the next steps.
+- **Status:** Phase 0 done; Phase 1 (Bronze) in progress. See [CLAUDE.md](CLAUDE.md) → Runway for the next steps.
+- **Onboarding a teammate?** Have them read [EITAN.md](EITAN.md).
 
 ## How to read this repo
 
