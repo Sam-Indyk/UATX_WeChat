@@ -1,0 +1,20 @@
+# Railway config. Tells Railway to build from the Dockerfile (not Nixpacks)
+# and how to restart if the container crashes.
+#
+# All env vars are set in the Railway dashboard, not here:
+#   - DATABASE_URL                  (Supabase pooler URL, with +psycopg prefix)
+#   - CLERK_JWKS_URL
+#   - CLERK_ISSUER
+#   - VITE_CLERK_PUBLISHABLE_KEY    (used as a build arg by the Dockerfile)
+#   - APP_ENV=prod
+# PORT is injected by Railway at runtime.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

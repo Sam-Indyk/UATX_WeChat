@@ -1,0 +1,15 @@
+**/.venv
+**/node_modules
+**/dist
+**/.vite
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.tsbuildinfo
+**/.env
+**/.env.local
+**/.env.*.local
+.git
+.github
+postgres-data
