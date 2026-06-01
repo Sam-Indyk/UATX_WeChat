@@ -1,20 +1,50 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { useApi } from "../lib/api";
+import { useUnread } from "../hooks/useUnreadCount";
 import type { Conversation } from "../lib/types";
+
+const POLL_INTERVAL_MS = 15_000;
 
 export default function Inbox() {
   const { user } = useUser();
   const { request } = useApi();
+  // Subscribe to the unread-count so when it changes (new message arrives,
+  // or another tab marks a conversation as read), we refetch the list too.
+  const { count: navUnread } = useUnread();
+
   const [convs, setConvs] = useState<Conversation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refetch = useCallback(() => {
     request<Conversation[]>("/api/conversations")
-      .then(setConvs)
+      .then((rows) => {
+        setConvs(rows);
+        setError(null);
+      })
       .catch((e) => setError(`Couldn't load inbox: ${String(e)}`));
   }, [request]);
+
+  // Initial load + poll while the tab is open + refresh-on-focus + react
+  // to nav unread changes (means someone marked something read, or a new
+  // message landed since the last poll).
+  useEffect(() => {
+    refetch();
+    const id = setInterval(refetch, POLL_INTERVAL_MS);
+    const onFocus = () => refetch();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refetch]);
+
+  useEffect(() => {
+    // Dependency on navUnread: when it changes (new incoming or a read
+    // elsewhere), refetch the inbox so per-thread pills stay in sync.
+    refetch();
+  }, [navUnread, refetch]);
 
   if (error) return <p className="text-red-600">{error}</p>;
   if (!convs) return <p className="text-slate-500">Loading…</p>;

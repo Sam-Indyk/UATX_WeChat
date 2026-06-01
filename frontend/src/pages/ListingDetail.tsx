@@ -38,6 +38,13 @@ export default function ListingDetail() {
 
   return (
     <article className="space-y-4">
+      {listing.image_url && (
+        <img
+          src={listing.image_url}
+          alt=""
+          className="w-full max-w-md rounded-lg border border-slate-200 object-cover"
+        />
+      )}
       <header>
         <h1 className="text-2xl font-semibold">{listing.book_title}</h1>
         <p className="text-slate-600">{listing.book_author}{listing.book_edition ? ` — ${listing.book_edition}` : ""}</p>

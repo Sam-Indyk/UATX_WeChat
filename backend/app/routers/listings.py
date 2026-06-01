@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
@@ -8,6 +8,7 @@ from app.auth import require_user
 from app.db import get_db
 from app.models import Listing, User
 from app.schemas.common import ListingCreate, ListingOut, ListingUpdate
+from app.storage import ALLOWED_CONTENT_TYPES, MAX_FILE_SIZE_BYTES, upload_listing_image
 
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
@@ -86,6 +87,51 @@ def update_listing(
     if payload.description is not None:
         listing.description = payload.description
 
+    db.commit()
+    db.refresh(listing)
+    db.refresh(listing, attribute_names=["seller", "course"])
+    return listing
+
+
+@router.post("/{listing_id}/image", response_model=ListingOut)
+async def upload_image(
+    listing_id: uuid.UUID,
+    file: UploadFile = File(...),
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> Listing:
+    """Attach a photo to a listing. Only the seller can upload.
+
+    Stored in Supabase Storage; the public URL is written to
+    `listings.image_url`. Replaces any previous image (old object is
+    left orphaned in storage — fine for now, can sweep later).
+    """
+    listing = db.get(Listing, listing_id)
+    if listing is None:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.seller_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your listing")
+
+    # Up-front validation so we don't read 50 MB into memory just to
+    # throw it away. We re-check inside the uploader as a belt-and-
+    # suspenders measure.
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported content type: {file.content_type!r}. Use JPEG, PNG, or WebP.",
+        )
+
+    data = await file.read()
+    if len(data) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 5 MB)")
+
+    public_url = upload_listing_image(
+        listing_id=listing.id,
+        content_type=file.content_type,
+        data=data,
+    )
+
+    listing.image_url = public_url
     db.commit()
     db.refresh(listing)
     db.refresh(listing, attribute_names=["seller", "course"])
