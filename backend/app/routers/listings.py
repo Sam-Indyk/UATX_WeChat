@@ -1,13 +1,13 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from sqlalchemy import select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_user
 from app.db import get_db
-from app.models import Listing, User
-from app.schemas.common import ListingCreate, ListingOut, ListingUpdate
+from app.models import Conversation, Listing, Message, User
+from app.schemas.common import ConversationOut, ListingCreate, ListingOut, ListingUpdate
 from app.storage import ALLOWED_CONTENT_TYPES, MAX_FILE_SIZE_BYTES, upload_listing_image
 
 
@@ -136,3 +136,59 @@ async def upload_image(
     db.refresh(listing)
     db.refresh(listing, attribute_names=["seller", "course"])
     return listing
+
+
+@router.get("/{listing_id}/conversations", response_model=list[ConversationOut])
+def list_listing_conversations(
+    listing_id: uuid.UUID,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> list[Conversation]:
+    """All conversations on this listing. Only the seller can call this —
+    buyers don't get to see OTHER buyers' threads.
+
+    Powers the My Listings → Chat subtab: shows each buyer as a row with
+    their last message and unread count.
+    """
+    listing = db.get(Listing, listing_id)
+    if listing is None:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.seller_id != user.id:
+        raise HTTPException(
+            status_code=403, detail="Only the seller can see all buyers' conversations"
+        )
+
+    convs = list(
+        db.execute(
+            select(Conversation)
+            .options(
+                joinedload(Conversation.listing).joinedload(Listing.seller),
+                joinedload(Conversation.listing).joinedload(Listing.course),
+                joinedload(Conversation.buyer),
+                joinedload(Conversation.other_user),
+            )
+            .where(Conversation.listing_id == listing_id)
+            .order_by(desc(Conversation.updated_at))
+        )
+        .scalars()
+        .unique()
+        .all()
+    )
+
+    # Per-conversation unread, same pattern as list_my_conversations.
+    if convs:
+        conv_ids = [c.id for c in convs]
+        rows = db.execute(
+            select(Message.conversation_id, func.count(Message.id))
+            .where(
+                Message.conversation_id.in_(conv_ids),
+                Message.sender_id != user.id,
+                Message.read_at.is_(None),
+            )
+            .group_by(Message.conversation_id)
+        ).all()
+        unread_by_conv = {cid: count for cid, count in rows}
+        for c in convs:
+            c.unread_count = unread_by_conv.get(c.id, 0)
+
+    return convs

@@ -1,17 +1,19 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import and_, case, desc, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_user
 from app.db import get_db
-from app.models import Conversation, Enrollment, Message, User
+from app.models import Conversation, Enrollment, Listing, Message, User
 from app.schemas.common import (
     EnrollmentIn,
     EnrollmentOut,
+    ListingOut,
     MeUpdate,
     UnreadCountOut,
+    UnreadCountsOut,
     UserOut,
 )
 
@@ -149,3 +151,117 @@ def my_unread_count(
     )
     count = db.execute(stmt).scalar() or 0
     return UnreadCountOut(count=count)
+
+
+@router.get("/unread-counts", response_model=UnreadCountsOut)
+def my_unread_counts(
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> UnreadCountsOut:
+    """Per-context unread breakdown for the three-badge nav.
+
+    For listing convos, `other_user_id` is the seller (we denormalize at
+    creation), so:
+      - I'm the seller iff (listing_id IS NOT NULL AND other_user_id = me)
+      - I'm the buyer  iff (listing_id IS NOT NULL AND buyer_id = me)
+    For DMs, listing_id IS NULL.
+
+    One query with three SUM(CASE) clauses — avoids three round-trips.
+    """
+    stmt = (
+        select(
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                Conversation.listing_id.is_not(None),
+                                Conversation.other_user_id == user.id,
+                            ),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("listings"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                Conversation.listing_id.is_not(None),
+                                Conversation.buyer_id == user.id,
+                            ),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("inquiries"),
+            func.coalesce(
+                func.sum(
+                    case((Conversation.listing_id.is_(None), 1), else_=0)
+                ),
+                0,
+            ).label("dms"),
+        )
+        .select_from(Message)
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .where(
+            Message.sender_id != user.id,
+            Message.read_at.is_(None),
+            or_(Conversation.buyer_id == user.id, Conversation.other_user_id == user.id),
+        )
+    )
+    row = db.execute(stmt).one()
+    listings = int(row.listings or 0)
+    inquiries = int(row.inquiries or 0)
+    dms = int(row.dms or 0)
+    return UnreadCountsOut(
+        listings=listings,
+        inquiries=inquiries,
+        dms=dms,
+        total=listings + inquiries + dms,
+    )
+
+
+@router.get("/listings", response_model=list[ListingOut])
+def my_listings(
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> list[Listing]:
+    """Listings the signed-in user posted, newest first, each with
+    `unread_count` = how many incoming messages across this listing's
+    conversations the seller hasn't read yet. Powers `/my-listings`.
+    """
+    listings = list(
+        db.execute(
+            select(Listing)
+            .options(joinedload(Listing.seller), joinedload(Listing.course))
+            .where(Listing.seller_id == user.id)
+            .order_by(desc(Listing.created_at))
+        )
+        .scalars()
+        .unique()
+        .all()
+    )
+
+    if listings:
+        listing_ids = [l.id for l in listings]
+        rows = db.execute(
+            select(Conversation.listing_id, func.count(Message.id))
+            .join(Message, Message.conversation_id == Conversation.id)
+            .where(
+                Conversation.listing_id.in_(listing_ids),
+                Message.sender_id != user.id,
+                Message.read_at.is_(None),
+            )
+            .group_by(Conversation.listing_id)
+        ).all()
+        unread_by_listing = {lid: count for lid, count in rows}
+        for l in listings:
+            l.unread_count = unread_by_listing.get(l.id, 0)
+
+    return listings
