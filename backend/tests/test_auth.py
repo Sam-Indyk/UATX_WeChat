@@ -49,3 +49,37 @@ def test_upsert_idempotent_for_returning_user(db) -> None:
     db.commit()
     assert a.id == b.id
     assert a.email == b.email
+
+
+def test_upsert_does_not_overwrite_manual_display_name(db) -> None:
+    """The settings-page bug: when Clerk's JWT has no name claim, our
+    synthesized fallback ("User abc123") must NOT overwrite a display_name
+    the user set via PATCH /api/me. Only real JWT claims should refresh.
+    """
+    # First sign-in — synthesized fallback because no name claim.
+    user = _upsert_user(db, {"sub": "user_eps"})
+    db.commit()
+    assert user.display_name.startswith("User ")
+
+    # User edits via Settings page.
+    user.display_name = "My Real Name"
+    db.commit()
+
+    # Subsequent sign-in (same claims, still no name). Should NOT stomp.
+    user2 = _upsert_user(db, {"sub": "user_eps"})
+    db.commit()
+    assert user2.display_name == "My Real Name"
+
+
+def test_upsert_does_overwrite_when_clerk_provides_a_real_name(db) -> None:
+    """Counterpart: if Clerk later starts sending a real name (because the
+    JWT template got configured), we DO want to refresh the row.
+    """
+    user = _upsert_user(db, {"sub": "user_zeta"})
+    db.commit()
+    user.display_name = "Stale Name"
+    db.commit()
+
+    user2 = _upsert_user(db, {"sub": "user_zeta", "name": "Fresh From Clerk"})
+    db.commit()
+    assert user2.display_name == "Fresh From Clerk"

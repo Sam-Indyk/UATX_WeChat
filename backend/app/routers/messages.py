@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, or_, desc, update
+from sqlalchemy import func, select, or_, desc, update
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.auth import require_user
@@ -103,7 +103,11 @@ def list_my_conversations(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> list[Conversation]:
-    """Conversations the user is part of — listing-scoped AND DMs."""
+    """Conversations the user is part of — listing-scoped AND DMs.
+
+    Each row carries `unread_count` (count of incoming messages this
+    user hasn't read yet) so the Inbox can show per-thread indicators.
+    """
     stmt = (
         select(Conversation)
         .options(
@@ -115,7 +119,26 @@ def list_my_conversations(
         .where(or_(Conversation.buyer_id == user.id, Conversation.other_user_id == user.id))
         .order_by(desc(Conversation.updated_at))
     )
-    return list(db.execute(stmt).scalars().unique().all())
+    convs = list(db.execute(stmt).scalars().unique().all())
+
+    # Annotate each conversation with the viewer's unread count via a
+    # single grouped query. Avoids N+1.
+    if convs:
+        conv_ids = [c.id for c in convs]
+        rows = db.execute(
+            select(Message.conversation_id, func.count(Message.id))
+            .where(
+                Message.conversation_id.in_(conv_ids),
+                Message.sender_id != user.id,
+                Message.read_at.is_(None),
+            )
+            .group_by(Message.conversation_id)
+        ).all()
+        unread_by_conv = {cid: count for cid, count in rows}
+        for c in convs:
+            # Pydantic's from_attributes will pick this up via getattr.
+            c.unread_count = unread_by_conv.get(c.id, 0)
+    return convs
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=list[MessageOut])
