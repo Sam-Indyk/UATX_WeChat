@@ -82,6 +82,7 @@ class ListingOut(BaseModel):
     price_cents: int
     description: str
     status: ListingStatus
+    image_url: str | None = None
     created_at: datetime
 
 

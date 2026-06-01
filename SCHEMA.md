@@ -41,6 +41,7 @@ Why `term` is a string rather than (year, season): readable in psql, fewer joins
 - `price_cents` — INTEGER, NOT NULL, ≥ 0.
 - `description` — TEXT, NOT NULL, length ≤ 2000.
 - `status` — TEXT, NOT NULL, one of `active`, `reserved`, `sold`, `withdrawn`. Default `active`. CHECK enforces.
+- `image_url` — TEXT, nullable, length ≤ 500. Public URL of the listing's photo in Supabase Storage (bucket `listing-images`). NULL when the seller didn't upload one.
 - `created_at`, `updated_at`.
 
 Indexes: `(course_id, status)` for the matching query, `(seller_id, created_at DESC)` for "my listings."

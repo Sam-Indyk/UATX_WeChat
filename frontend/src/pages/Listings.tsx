@@ -59,9 +59,17 @@ export default function Listings() {
           <li key={l.id}>
             <Link
               to={`/listings/${l.id}`}
-              className="block rounded-lg border border-slate-200 bg-white p-4 hover:border-slate-400"
+              className="block overflow-hidden rounded-lg border border-slate-200 bg-white hover:border-slate-400"
             >
-              <div className="flex justify-between gap-2">
+              {l.image_url && (
+                <img
+                  src={l.image_url}
+                  alt=""
+                  className="w-full h-40 object-cover"
+                  loading="lazy"
+                />
+              )}
+              <div className="flex justify-between gap-2 p-4">
                 <div>
                   <p className="font-medium">{l.book_title}</p>
                   <p className="text-sm text-slate-600">{l.book_author}</p>

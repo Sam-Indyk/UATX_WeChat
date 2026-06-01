@@ -32,6 +32,7 @@ export type Listing = {
   price_cents: number;
   description: string;
   status: ListingStatus;
+  image_url: string | null;
   created_at: string;
 };
 

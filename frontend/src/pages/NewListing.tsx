@@ -19,6 +19,8 @@ export default function NewListing() {
   const [condition, setCondition] = useState<typeof CONDITIONS[number]>("good");
   const [priceCents, setPriceCents] = useState(1500);
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,21 @@ export default function NewListing() {
           description,
         },
       });
+      // If the user picked an image, upload it now. Failure here is
+      // non-fatal: the listing is already created, we just couldn't
+      // attach the photo. Surface the error but still navigate.
+      if (image) {
+        try {
+          const fd = new FormData();
+          fd.append("file", image);
+          await request<Listing>(`/api/listings/${listing.id}/image`, {
+            method: "POST",
+            body: fd,
+          });
+        } catch (e) {
+          setError(`Listing posted, but the image upload failed: ${String(e)}`);
+        }
+      }
       nav(`/listings/${listing.id}`);
     } catch (e) {
       setError(`Couldn't create listing: ${String(e)}`);
@@ -132,6 +149,34 @@ export default function NewListing() {
           rows={4}
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
+      </Field>
+
+      <Field label="Photo (optional)">
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            setImageError(null);
+            if (f && f.size > 5 * 1024 * 1024) {
+              setImageError("Image too large (max 5 MB).");
+              setImage(null);
+              e.target.value = "";
+              return;
+            }
+            setImage(f);
+          }}
+          className="w-full text-sm"
+        />
+        {image && (
+          <p className="text-xs text-slate-500 mt-1">
+            {image.name} ({(image.size / 1024).toFixed(0)} KB)
+          </p>
+        )}
+        {imageError && <p className="text-red-600 text-xs mt-1">{imageError}</p>}
+        <span className="block text-xs text-slate-500 mt-1">
+          JPEG, PNG, or WebP, up to 5 MB.
+        </span>
       </Field>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}

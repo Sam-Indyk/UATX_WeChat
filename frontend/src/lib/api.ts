@@ -30,13 +30,18 @@ export async function apiRequest<T>(
   path: string,
   { method = "GET", body, token }: ApiRequestOptions = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  // FormData has to set its own Content-Type with the boundary string —
+  // don't add our own JSON header, and don't JSON.stringify the body.
+  const isFormData = body instanceof FormData;
+
+  const headers: Record<string, string> = isFormData ? {} : { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body:
+      body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
   });
 
   const text = await res.text();
