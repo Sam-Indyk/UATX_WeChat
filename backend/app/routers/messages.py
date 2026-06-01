@@ -1,13 +1,14 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, or_, desc
+from sqlalchemy import select, or_, desc, update
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.auth import require_user
 from app.db import get_db
 from app.models import Conversation, Listing, Message, User
-from app.schemas.common import ConversationOut, MessageIn, MessageOut
+from app.schemas.common import ConversationOut, MarkReadOut, MessageIn, MessageOut
 
 
 router = APIRouter(prefix="/api", tags=["messages"])
@@ -123,3 +124,41 @@ def send_message(
     db.commit()
     db.refresh(msg)
     return msg
+
+
+@router.post(
+    "/conversations/{conversation_id}/read",
+    response_model=MarkReadOut,
+)
+def mark_conversation_read(
+    conversation_id: uuid.UUID,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> MarkReadOut:
+    """Mark all messages in this conversation from the OTHER party as read.
+
+    Idempotent: re-calling on a fully-read conversation returns marked_read=0.
+    Called by the frontend when the user opens a conversation thread.
+    """
+    conv = db.execute(
+        select(Conversation)
+        .options(joinedload(Conversation.listing))
+        .where(Conversation.id == conversation_id)
+    ).scalar_one_or_none()
+    if conv is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if not _user_in_conversation(conv, user.id):
+        raise HTTPException(status_code=403, detail="Not your conversation")
+
+    stmt = (
+        update(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.sender_id != user.id,
+            Message.read_at.is_(None),
+        )
+        .values(read_at=datetime.now(timezone.utc))
+    )
+    result = db.execute(stmt)
+    db.commit()
+    return MarkReadOut(marked_read=result.rowcount or 0)

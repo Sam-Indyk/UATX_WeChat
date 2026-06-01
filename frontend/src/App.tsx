@@ -10,6 +10,7 @@ import Inbox from "./pages/Inbox";
 import Conversation from "./pages/Conversation";
 import Classmates from "./pages/Classmates";
 import Settings from "./pages/Settings";
+import { useUnreadCount } from "./hooks/useUnreadCount";
 
 export default function App() {
   return (
@@ -44,7 +45,7 @@ function Nav() {
         <SignedIn>
           <Link to="/match" className="text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
           <Link to="/classmates" className="text-sm text-slate-600 hover:text-slate-900">Classmates</Link>
-          <Link to="/inbox" className="text-sm text-slate-600 hover:text-slate-900">Inbox</Link>
+          <InboxLink />
           <Link to="/listings/new" className="text-sm text-slate-600 hover:text-slate-900">Sell a book</Link>
         </SignedIn>
         <div className="ml-auto flex items-center gap-3">
@@ -58,6 +59,23 @@ function Nav() {
         </div>
       </div>
     </nav>
+  );
+}
+
+function InboxLink() {
+  const unread = useUnreadCount();
+  return (
+    <Link to="/inbox" className="relative text-sm text-slate-600 hover:text-slate-900">
+      Inbox
+      {unread > 0 && (
+        <span
+          className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
+          aria-label={`${unread} unread`}
+        >
+          {unread > 99 ? "99+" : unread}
+        </span>
+      )}
+    </Link>
   );
 }
 

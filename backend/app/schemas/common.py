@@ -18,6 +18,14 @@ class MeUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=80)
 
 
+class UnreadCountOut(BaseModel):
+    count: int
+
+
+class MarkReadOut(BaseModel):
+    marked_read: int
+
+
 class CourseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
