@@ -8,6 +8,7 @@ from app.auth import require_user
 from app.db import get_db
 from app.models import Conversation, Enrollment, Listing, Message, User
 from app.schemas.common import (
+    ConversationOut,
     EnrollmentIn,
     EnrollmentOut,
     ListingOut,
@@ -265,3 +266,53 @@ def my_listings(
             l.unread_count = unread_by_listing.get(l.id, 0)
 
     return listings
+
+
+@router.get("/inquiries", response_model=list[ConversationOut])
+def my_inquiries(
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> list[Conversation]:
+    """Listing-scoped conversations where I'm the buyer.
+
+    Buyer-side counterpart to GET /api/listings/{id}/conversations.
+    Powers /my-inquiries — the home for "books I'm shopping for."
+    Per-conversation `unread_count` populated, same pattern as the
+    main /api/conversations endpoint.
+    """
+    convs = list(
+        db.execute(
+            select(Conversation)
+            .options(
+                joinedload(Conversation.listing).joinedload(Listing.seller),
+                joinedload(Conversation.listing).joinedload(Listing.course),
+                joinedload(Conversation.buyer),
+                joinedload(Conversation.other_user),
+            )
+            .where(
+                Conversation.buyer_id == user.id,
+                Conversation.listing_id.is_not(None),
+            )
+            .order_by(desc(Conversation.updated_at))
+        )
+        .scalars()
+        .unique()
+        .all()
+    )
+
+    if convs:
+        conv_ids = [c.id for c in convs]
+        rows = db.execute(
+            select(Message.conversation_id, func.count(Message.id))
+            .where(
+                Message.conversation_id.in_(conv_ids),
+                Message.sender_id != user.id,
+                Message.read_at.is_(None),
+            )
+            .group_by(Message.conversation_id)
+        ).all()
+        unread_by_conv = {cid: count for cid, count in rows}
+        for c in convs:
+            c.unread_count = unread_by_conv.get(c.id, 0)
+
+    return convs

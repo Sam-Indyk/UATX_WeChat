@@ -12,6 +12,7 @@ import Classmates from "./pages/Classmates";
 import Settings from "./pages/Settings";
 import MyListings from "./pages/MyListings";
 import MyListingDetail from "./pages/MyListingDetail";
+import MyInquiries from "./pages/MyInquiries";
 import { useUnread } from "./hooks/useUnreadCount";
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/inbox/:id" element={<RequireAuth><Conversation /></RequireAuth>} />
           <Route path="/my-listings" element={<RequireAuth><MyListings /></RequireAuth>} />
           <Route path="/my-listings/:id" element={<RequireAuth><MyListingDetail /></RequireAuth>} />
+          <Route path="/my-inquiries" element={<RequireAuth><MyInquiries /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -50,6 +52,7 @@ function Nav() {
           <Link to="/match" className="text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
           <Link to="/classmates" className="text-sm text-slate-600 hover:text-slate-900">Classmates</Link>
           <MyListingsLink />
+          <MyInquiriesLink />
           <InboxLink />
           <Link to="/listings/new" className="text-sm text-slate-600 hover:text-slate-900">Sell a book</Link>
         </SignedIn>
@@ -97,6 +100,24 @@ function MyListingsLink() {
         <span
           className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
           aria-label={`${unread} unread on your listings`}
+        >
+          {unread > 99 ? "99+" : unread}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function MyInquiriesLink() {
+  const { counts } = useUnread();
+  const unread = counts.inquiries;
+  return (
+    <Link to="/my-inquiries" className="relative text-sm text-slate-600 hover:text-slate-900">
+      My inquiries
+      {unread > 0 && (
+        <span
+          className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
+          aria-label={`${unread} unread on your inquiries`}
         >
           {unread > 99 ? "99+" : unread}
         </span>
