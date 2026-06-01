@@ -5,7 +5,7 @@ A marketplace and chat app for UATX students to buy and sell used textbooks from
 - **Live URL:** https://uatxwechat-production.up.railway.app
 - **GitHub:** https://github.com/Sam-Indyk/UATX_WeChat
 - **Tier targeted:** Gold
-- **Status:** Phase 0 done; Phase 1 (Bronze) in progress. See [CLAUDE.md](CLAUDE.md) → Runway for the next steps.
+- **Status:** Phase 0 done. Phase 1 (Bronze) in progress — core marketplace + chat scaffolded and deployed, smoke-test + enrollment-state work next. Silver "second nontrivial piece" (classmates) already shipped. See [CLAUDE.md](CLAUDE.md) → Runway for the live to-do.
 - **Onboarding a teammate?** Have them read [EITAN.md](EITAN.md).
 
 ## How to read this repo
@@ -74,9 +74,11 @@ Commits from every teammate are required by the spec — coordinate so `git log`
 
 ## Nontrivial logic
 
-- **Bronze:** Course-matching algorithm at [backend/app/routers/matching.py](backend/app/routers/matching.py) → `match_listings_for_user`. Ranks active listings against the signed-in user's current courses, weighted by seller course recency with listing-freshness and price tiebreakers.
-- **Silver:** TBD — pick from CLAUDE.md candidates.
-- **Gold custom features:** TBD (need 2).
+- **Bronze:** Course-matching algorithm at [backend/app/routers/matching.py](backend/app/routers/matching.py) → `match_listings_for_user`. Ranks active book listings against the signed-in user's current and upcoming courses, weighted by seller course recency with listing-freshness and price tiebreakers.
+- **Silver:** Classmates lookup at [backend/app/routers/classmates.py](backend/app/routers/classmates.py) → `GET /api/classmates`. Real cross-table aggregation across `users` × `enrollments` (self-join on course overlap), groups results per classmate with the list of shared courses, deduplicates classmates who share multiple courses.
+- **Gold custom feature 1:** Image uploads on listings (Supabase Storage). Optional single image per listing.
+- **Gold custom feature 2:** General-purpose marketplace ("Everything Else" tab). Sell furniture, electronics, sports gear, clothing, etc. — anything between UATX students. Category filter + search.
+- **Gold "pick one":** Real-time-ish chat via polling.
 
 ## Design decisions (initial)
 
