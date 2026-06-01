@@ -47,11 +47,14 @@ Indexes: `(course_id, status)` for the matching query, `(seller_id, created_at D
 
 ### `conversations`
 - `id` — UUID, PK.
-- `listing_id` — UUID, FK → `listings(id)` ON DELETE CASCADE.
-- `buyer_id` — TEXT, FK → `users(id)` ON DELETE CASCADE. The seller side is implicit from the listing.
+- `listing_id` — UUID, FK → `listings(id)` ON DELETE CASCADE. **Nullable** — null indicates a direct-message conversation between two students that isn't tied to any listing (started from the Classmates page).
+- `buyer_id` — TEXT, FK → `users(id)` ON DELETE CASCADE. For listing convos this is the buyer (seller is implicit from the listing). For DMs this is just "one of the two parties" — the application canonicalizes so that `buyer_id < other_user_id` for DMs, which lets a partial unique index prevent A→B and B→A from creating two rows.
+- `other_user_id` — TEXT, FK → `users(id)` ON DELETE CASCADE. The other party. For listing convos this equals `listings.seller_id` (denormalized so membership checks don't have to JOIN). For DMs this is the second user in the pair.
 - `created_at`, `updated_at`. `updated_at` bumps whenever a new message lands so inbox sorting is cheap.
-- **UNIQUE** (`listing_id`, `buyer_id`) — one thread per (listing, buyer). The seller is the listing's seller.
-- **CHECK** (`buyer_id <> listings.seller_id`) — can't message yourself about your own listing. Enforced at the application layer because cross-row CHECK constraints are awkward in Postgres.
+- **Partial UNIQUE indexes** instead of a constraint, because the uniqueness rule differs by kind:
+  - `uq_conversation_listing` on `(listing_id, buyer_id)` `WHERE listing_id IS NOT NULL` — one thread per (listing, buyer).
+  - `uq_conversation_dm` on `(buyer_id, other_user_id)` `WHERE listing_id IS NULL` — one DM per ordered pair (canonicalized).
+- **CHECK** (`buyer_id <> other_user_id`) is enforced at the application layer (can't DM yourself, can't message yourself about your own listing).
 
 ### `messages`
 - `id` — UUID, PK.

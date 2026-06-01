@@ -92,3 +92,43 @@ def test_excludes_self_even_with_duplicate_enrollments(client, phil, db) -> None
     r = client.get("/api/classmates")
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_classmates_sorted_by_overlap_count(client, phil, db, make_user) -> None:
+    """Most-shared-courses classmate appears first; alphabetical tiebreaker."""
+    math = Course(id=uuid.uuid4(), code="MATH 201", title="Calculus I")
+    db.add(math)
+    db.commit()
+
+    me = client.current_user
+    _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
+    _enroll(db, user_id=me.id, course_id=math.id, term="Spring 2026")
+
+    # Anna shares 1 course; Bob shares 2; Cara shares 1 (tiebreaker with Anna).
+    anna = make_user(display_name="Anna")
+    bob = make_user(display_name="Bob")
+    cara = make_user(display_name="Cara")
+    _enroll(db, user_id=anna.id, course_id=phil.id, term="Spring 2026")
+    _enroll(db, user_id=bob.id, course_id=phil.id, term="Spring 2026")
+    _enroll(db, user_id=bob.id, course_id=math.id, term="Spring 2026")
+    _enroll(db, user_id=cara.id, course_id=math.id, term="Spring 2026")
+
+    rows = client.get("/api/classmates").json()
+    names = [r["display_name"] for r in rows]
+    # Bob (2 overlaps) first, then Anna and Cara (1 each, alphabetical).
+    assert names == ["Bob", "Anna", "Cara"]
+    assert len(rows[0]["shared_courses"]) == 2
+    assert len(rows[1]["shared_courses"]) == 1
+    assert len(rows[2]["shared_courses"]) == 1
+
+
+def test_classmates_response_includes_course_titles(client, phil, db, make_user) -> None:
+    """Frontend renders titles, not codes — so the response must carry them."""
+    me = client.current_user
+    _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
+    other = make_user(display_name="Eitan")
+    _enroll(db, user_id=other.id, course_id=phil.id, term="Spring 2026")
+
+    rows = client.get("/api/classmates").json()
+    assert rows[0]["shared_courses"][0]["title"] == "Intro to Philosophy"
+    assert rows[0]["shared_courses"][0]["code"] == "PHIL 101"

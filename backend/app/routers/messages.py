@@ -15,7 +15,9 @@ router = APIRouter(prefix="/api", tags=["messages"])
 
 
 def _user_in_conversation(conv: Conversation, user_id: str) -> bool:
-    return user_id == conv.buyer_id or user_id == conv.listing.seller_id
+    # `other_user_id` is populated for both listing convos (= seller_id) and
+    # DMs (= the other party), so this one check works for both kinds.
+    return user_id == conv.buyer_id or user_id == conv.other_user_id
 
 
 @router.post("/listings/{listing_id}/contact", response_model=ConversationOut, status_code=201)
@@ -43,12 +45,56 @@ def start_or_get_conversation(
     ).scalar_one_or_none()
 
     if conv is None:
-        conv = Conversation(listing_id=listing_id, buyer_id=user.id)
+        conv = Conversation(
+            listing_id=listing_id,
+            buyer_id=user.id,
+            other_user_id=listing.seller_id,
+        )
         db.add(conv)
         db.commit()
         db.refresh(conv)
 
-    db.refresh(conv, attribute_names=["listing", "buyer"])
+    db.refresh(conv, attribute_names=["listing", "buyer", "other_user"])
+    return conv
+
+
+@router.post("/users/{other_user_id}/dm", response_model=ConversationOut, status_code=201)
+def start_or_get_dm(
+    other_user_id: str,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> Conversation:
+    """Start (or resume) a direct-message conversation with another user.
+
+    Used from the Classmates page — click a classmate to chat without a
+    listing as context. Idempotent: calling A→B then B→A returns the same
+    conversation (we canonicalize so the smaller user_id is `buyer_id`).
+    """
+    if other_user_id == user.id:
+        raise HTTPException(status_code=400, detail="Can't DM yourself")
+
+    other = db.get(User, other_user_id)
+    if other is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Canonicalize the pair so (A→B) and (B→A) hit the same row.
+    a, b = sorted([user.id, other.id])
+
+    conv = db.execute(
+        select(Conversation).where(
+            Conversation.listing_id.is_(None),
+            Conversation.buyer_id == a,
+            Conversation.other_user_id == b,
+        )
+    ).scalar_one_or_none()
+
+    if conv is None:
+        conv = Conversation(listing_id=None, buyer_id=a, other_user_id=b)
+        db.add(conv)
+        db.commit()
+        db.refresh(conv)
+
+    db.refresh(conv, attribute_names=["listing", "buyer", "other_user"])
     return conv
 
 
@@ -57,16 +103,16 @@ def list_my_conversations(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> list[Conversation]:
-    """Conversations the user is part of, as either buyer or seller."""
+    """Conversations the user is part of — listing-scoped AND DMs."""
     stmt = (
         select(Conversation)
         .options(
             joinedload(Conversation.listing).joinedload(Listing.seller),
             joinedload(Conversation.listing).joinedload(Listing.course),
             joinedload(Conversation.buyer),
+            joinedload(Conversation.other_user),
         )
-        .join(Listing, Conversation.listing_id == Listing.id)
-        .where(or_(Conversation.buyer_id == user.id, Listing.seller_id == user.id))
+        .where(or_(Conversation.buyer_id == user.id, Conversation.other_user_id == user.id))
         .order_by(desc(Conversation.updated_at))
     )
     return list(db.execute(stmt).scalars().unique().all())

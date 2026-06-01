@@ -2,13 +2,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { useApi } from "../lib/api";
-import type { Message } from "../lib/types";
+import type { Conversation, Message } from "../lib/types";
 
 export default function ConversationPage() {
   const { id } = useParams();
   const { user } = useUser();
   const { request } = useApi();
 
+  const [conv, setConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [body, setBody] = useState("");
@@ -16,6 +17,11 @@ export default function ConversationPage() {
 
   useEffect(() => {
     if (!id) return;
+    // Find the conversation's context (other party, listing) by reusing the
+    // inbox list — small list, no need for a dedicated GET-one endpoint.
+    request<Conversation[]>("/api/conversations")
+      .then((rows) => setConv(rows.find((c) => c.id === id) ?? null))
+      .catch(() => {});
     request<Message[]>(`/api/conversations/${id}/messages`)
       .then(setMessages)
       .catch((e) => setError(`Couldn't load messages: ${String(e)}`));
@@ -48,9 +54,22 @@ export default function ConversationPage() {
   if (error) return <p className="text-red-600">{error}</p>;
   if (!messages) return <p className="text-slate-500">Loading…</p>;
 
+  const otherParty = conv
+    ? conv.buyer.id === user?.id
+      ? conv.other_user
+      : conv.buyer
+    : null;
+
   return (
     <section className="space-y-4 max-w-xl">
-      <h1 className="text-xl font-semibold">Conversation</h1>
+      <header>
+        <h1 className="text-xl font-semibold">
+          {otherParty ? `Chat with ${otherParty.display_name}` : "Conversation"}
+        </h1>
+        {conv?.listing && (
+          <p className="text-sm text-slate-600">About {conv.listing.book_title}</p>
+        )}
+      </header>
       <ul className="space-y-2">
         {messages.map((m) => {
           const mine = m.sender_id === user?.id;

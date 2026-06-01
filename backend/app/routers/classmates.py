@@ -57,6 +57,13 @@ def list_classmates(
             by_user[other.id] = entry
         entry["courses"].append(course)
 
+    # Sort by overlap count descending (most classes-in-common at the top),
+    # then alphabetically by name as a stable tiebreaker.
+    sorted_entries = sorted(
+        by_user.values(),
+        key=lambda v: (-len(v["courses"]), v["user"].display_name.lower()),
+    )
+
     return [
         ClassmateOut(
             id=v["user"].id,
@@ -64,5 +71,5 @@ def list_classmates(
             avatar_url=v["user"].avatar_url,
             shared_courses=[CourseOut.model_validate(c) for c in v["courses"]],
         )
-        for v in by_user.values()
+        for v in sorted_entries
     ]

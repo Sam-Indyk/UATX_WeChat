@@ -25,8 +25,17 @@ export default function Inbox() {
       {convs.length === 0 && <p className="text-slate-500">No conversations yet.</p>}
       <ul className="space-y-2">
         {convs.map((c) => {
-          const iAmBuyer = c.buyer.id === user?.id;
-          const otherName = iAmBuyer ? c.listing.seller.display_name : c.buyer.display_name;
+          // Pick whichever party isn't me.
+          const other = c.buyer.id === user?.id ? c.other_user : c.buyer;
+          const isDM = c.listing === null;
+          const title = isDM ? "Direct message" : c.listing!.book_title;
+          // Tag the conversation kind on the right so people can tell DMs
+          // and listing chats apart at a glance.
+          const tag = isDM
+            ? "DM"
+            : c.buyer.id === user?.id
+            ? "Buying"
+            : "Selling";
           return (
             <li key={c.id}>
               <Link
@@ -35,10 +44,10 @@ export default function Inbox() {
               >
                 <div className="flex justify-between">
                   <div>
-                    <p className="font-medium">{c.listing.book_title}</p>
-                    <p className="text-sm text-slate-600">with {otherName}</p>
+                    <p className="font-medium">{title}</p>
+                    <p className="text-sm text-slate-600">with {other.display_name}</p>
                   </div>
-                  <p className="text-xs text-slate-500">{iAmBuyer ? "Buying" : "Selling"}</p>
+                  <p className="text-xs text-slate-500">{tag}</p>
                 </div>
               </Link>
             </li>

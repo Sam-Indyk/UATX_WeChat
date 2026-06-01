@@ -51,8 +51,10 @@ export type Message = {
 
 export type Conversation = {
   id: string;
-  listing: Listing;
+  // Null for direct-message conversations (started from the Classmates page).
+  listing: Listing | null;
   buyer: User;
+  other_user: User;
   updated_at: string;
   last_message: Message | null;
 };

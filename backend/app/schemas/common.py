@@ -109,8 +109,11 @@ class ConversationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    listing: ListingOut
+    # None for direct-message conversations (a DM started from the
+    # Classmates page is not tied to any listing).
+    listing: ListingOut | None = None
     buyer: UserOut
+    other_user: UserOut
     updated_at: datetime
     last_message: MessageOut | None = None
 

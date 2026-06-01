@@ -75,7 +75,12 @@ def test_unread_count_excludes_conversations_im_not_in(client, seller_and_listin
     seller, listing = seller_and_listing
     # A third party creates a conversation with the seller and sends a message.
     third = make_user(email="third@student.uaustin.org")
-    conv = Conversation(id=uuid.uuid4(), listing_id=listing.id, buyer_id=third.id)
+    conv = Conversation(
+        id=uuid.uuid4(),
+        listing_id=listing.id,
+        buyer_id=third.id,
+        other_user_id=seller.id,
+    )
     db.add(conv)
     db.flush()
     db.add(
