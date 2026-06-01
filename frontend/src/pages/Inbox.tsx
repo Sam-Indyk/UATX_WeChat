@@ -36,18 +36,33 @@ export default function Inbox() {
             : c.buyer.id === user?.id
             ? "Buying"
             : "Selling";
+          const unread = c.unread_count;
           return (
             <li key={c.id}>
               <Link
                 to={`/inbox/${c.id}`}
-                className="block rounded-lg border border-slate-200 bg-white p-3 hover:border-slate-400"
+                className={`block rounded-lg border bg-white p-3 hover:border-slate-400 ${
+                  unread > 0 ? "border-slate-400" : "border-slate-200"
+                }`}
               >
-                <div className="flex justify-between">
-                  <div>
-                    <p className="font-medium">{title}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className={`truncate ${unread > 0 ? "font-semibold" : "font-medium"}`}>
+                      {title}
+                    </p>
                     <p className="text-sm text-slate-600">with {other.display_name}</p>
                   </div>
-                  <p className="text-xs text-slate-500">{tag}</p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {unread > 0 && (
+                      <span
+                        className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center"
+                        aria-label={`${unread} unread`}
+                      >
+                        {unread > 99 ? "99+" : unread}
+                      </span>
+                    )}
+                    <p className="text-xs text-slate-500">{tag}</p>
+                  </div>
                 </div>
               </Link>
             </li>

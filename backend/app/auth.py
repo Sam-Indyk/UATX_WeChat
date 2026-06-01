@@ -107,19 +107,19 @@ def _upsert_user(db: Session, claims: dict[str, Any]) -> User:
         or claims.get("email_address")
         or claims.get("primary_email_address")
     )
+    raw_name = claims.get("name") or claims.get("full_name")
+    raw_avatar = claims.get("picture") or claims.get("image_url")
 
-    # Synthesize a unique placeholder email when Clerk didn't give us one.
-    # Without this, every user past the first would 500 on signup because
-    # users.email is UNIQUE NOT NULL and we'd insert "" repeatedly.
-    # The .local TLD is reserved (RFC 6762) — no real address collides.
+    # Synthesize fallbacks for the INSERT case. Clerk's default session token
+    # doesn't include email/name/picture (you'd have to configure a JWT
+    # template). Without these fallbacks, the first INSERT would put empty
+    # string in users.email and collide with the UNIQUE constraint on the
+    # second user. The .local TLD is reserved (RFC 6762).
     email = raw_email or f"{user_id}@clerk.local"
-
     display_name = (
-        claims.get("name")
-        or claims.get("full_name")
+        raw_name
         or (raw_email.split("@")[0] if raw_email else f"User {user_id[-6:]}")
     )
-    avatar_url = claims.get("picture") or claims.get("image_url")
 
     if raw_email:
         _enforce_email_domain(raw_email)
@@ -130,18 +130,22 @@ def _upsert_user(db: Session, claims: dict[str, Any]) -> User:
             id=user_id,
             email=email,
             display_name=display_name,
-            avatar_url=avatar_url,
+            avatar_url=raw_avatar,
         )
         db.add(user)
         db.flush()
     else:
-        # Refresh metadata if Clerk's copy is newer.
-        if email and user.email != email:
-            user.email = email
-        if display_name and user.display_name != display_name:
-            user.display_name = display_name
-        if avatar_url and user.avatar_url != avatar_url:
-            user.avatar_url = avatar_url
+        # Refresh metadata ONLY when Clerk actually provided the claim.
+        # If we used the synthesized fallback (raw_* is falsy), we'd
+        # overwrite anything the user edited via the Settings page —
+        # which is the bug Sam hit where his display_name kept resetting
+        # to "User q2Nia7" after he saved a real name.
+        if raw_email and user.email != raw_email:
+            user.email = raw_email
+        if raw_name and user.display_name != raw_name:
+            user.display_name = raw_name
+        if raw_avatar and user.avatar_url != raw_avatar:
+            user.avatar_url = raw_avatar
 
     return user
 

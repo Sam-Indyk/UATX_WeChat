@@ -10,7 +10,7 @@ import Inbox from "./pages/Inbox";
 import Conversation from "./pages/Conversation";
 import Classmates from "./pages/Classmates";
 import Settings from "./pages/Settings";
-import { useUnreadCount } from "./hooks/useUnreadCount";
+import { useUnread } from "./hooks/useUnreadCount";
 
 export default function App() {
   return (
@@ -63,7 +63,7 @@ function Nav() {
 }
 
 function InboxLink() {
-  const unread = useUnreadCount();
+  const { count: unread } = useUnread();
   return (
     <Link to="/inbox" className="relative text-sm text-slate-600 hover:text-slate-900">
       Inbox

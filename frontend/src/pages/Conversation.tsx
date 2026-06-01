@@ -2,12 +2,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { useApi } from "../lib/api";
+import { useUnread } from "../hooks/useUnreadCount";
 import type { Conversation, Message } from "../lib/types";
 
 export default function ConversationPage() {
   const { id } = useParams();
   const { user } = useUser();
   const { request } = useApi();
+  const { refetch: refetchUnread } = useUnread();
 
   const [conv, setConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[] | null>(null);
@@ -25,13 +27,12 @@ export default function ConversationPage() {
     request<Message[]>(`/api/conversations/${id}/messages`)
       .then(setMessages)
       .catch((e) => setError(`Couldn't load messages: ${String(e)}`));
-    // Fire-and-forget mark-as-read. The nav badge updates on its next 30s
-    // poll. If the call fails we don't surface anything — at worst the
-    // user sees a stale badge for a few seconds.
-    request<{ marked_read: number }>(`/api/conversations/${id}/read`, { method: "POST" }).catch(
-      () => {},
-    );
-  }, [id, request]);
+    // Mark as read, then force-refresh the nav badge so the count drops
+    // immediately instead of waiting up to 30s for the next poll.
+    request<{ marked_read: number }>(`/api/conversations/${id}/read`, { method: "POST" })
+      .then(() => refetchUnread())
+      .catch(() => {});
+  }, [id, request, refetchUnread]);
 
   async function send(e: FormEvent) {
     e.preventDefault();

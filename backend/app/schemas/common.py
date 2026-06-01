@@ -116,6 +116,9 @@ class ConversationOut(BaseModel):
     other_user: UserOut
     updated_at: datetime
     last_message: MessageOut | None = None
+    # Incoming messages addressed to the viewer that aren't yet read.
+    # Populated by the conversations list endpoint per row; 0 elsewhere.
+    unread_count: int = 0
 
 
 class ClassmateOut(BaseModel):

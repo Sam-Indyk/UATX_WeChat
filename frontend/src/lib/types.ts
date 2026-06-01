@@ -57,6 +57,8 @@ export type Conversation = {
   other_user: User;
   updated_at: string;
   last_message: Message | null;
+  // Incoming messages addressed to the viewer that aren't yet read.
+  unread_count: number;
 };
 
 export type Classmate = {

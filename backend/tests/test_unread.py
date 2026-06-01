@@ -161,3 +161,41 @@ def test_mark_read_requires_membership(client, seller_and_listing, make_user) ->
 def test_unread_count_requires_auth(anon_client) -> None:
     r = anon_client.get("/api/me/unread-count")
     assert r.status_code == 401
+
+
+def test_conversations_list_has_per_thread_unread_count(client, seller_and_listing, db) -> None:
+    """The Inbox shows a per-conversation unread badge — the list endpoint
+    must return that count per row.
+    """
+    seller, listing = seller_and_listing
+    conv_id = client.post(f"/api/listings/{listing.id}/contact").json()["id"]
+    # Two incoming, one outgoing.
+    db.add_all(
+        [
+            Message(
+                id=uuid.uuid4(),
+                conversation_id=uuid.UUID(conv_id),
+                sender_id=seller.id,
+                body="hi",
+                read_at=None,
+            ),
+            Message(
+                id=uuid.uuid4(),
+                conversation_id=uuid.UUID(conv_id),
+                sender_id=seller.id,
+                body="you there?",
+                read_at=None,
+            ),
+        ]
+    )
+    db.commit()
+    client.post(f"/api/conversations/{conv_id}/messages", json={"body": "yes"})
+
+    rows = client.get("/api/conversations").json()
+    assert len(rows) == 1
+    assert rows[0]["unread_count"] == 2
+
+    # After marking read, the per-conversation count drops too.
+    client.post(f"/api/conversations/{conv_id}/read")
+    rows = client.get("/api/conversations").json()
+    assert rows[0]["unread_count"] == 0
