@@ -86,6 +86,16 @@ def update_listing(
         listing.price_cents = payload.price_cents
     if payload.description is not None:
         listing.description = payload.description
+    if payload.book_title is not None:
+        listing.book_title = payload.book_title.strip()
+    if payload.book_author is not None:
+        listing.book_author = payload.book_author.strip()
+    if payload.book_edition is not None:
+        listing.book_edition = payload.book_edition.strip() or None
+    if payload.condition is not None:
+        listing.condition = payload.condition
+    if payload.course_id is not None:
+        listing.course_id = payload.course_id
 
     db.commit()
     db.refresh(listing)
