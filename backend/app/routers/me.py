@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import and_, case, desc, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -17,6 +17,7 @@ from app.schemas.common import (
     UnreadCountsOut,
     UserOut,
 )
+from app.storage import ALLOWED_CONTENT_TYPES, MAX_FILE_SIZE_BYTES, upload_avatar
 
 
 router = APIRouter(prefix="/api/me", tags=["me"])
@@ -45,6 +46,39 @@ def update_me(
             raise HTTPException(status_code=422, detail="display_name cannot be blank")
         user.display_name = new_name
 
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.post("/avatar", response_model=UserOut)
+async def upload_my_avatar(
+    file: UploadFile = File(...),
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> User:
+    """Upload a profile picture for the signed-in user.
+
+    Same Supabase Storage pattern as listing images — 5 MB cap,
+    JPEG/PNG/WebP, public URL stamped onto users.avatar_url.
+    """
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported content type: {file.content_type!r}. Use JPEG, PNG, or WebP.",
+        )
+
+    data = await file.read()
+    if len(data) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 5 MB)")
+
+    public_url = upload_avatar(
+        user_id=user.id,
+        content_type=file.content_type,
+        data=data,
+    )
+
+    user.avatar_url = public_url
     db.commit()
     db.refresh(user)
     return user
