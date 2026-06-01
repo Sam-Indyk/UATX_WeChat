@@ -9,6 +9,7 @@ import Match from "./pages/Match";
 import Inbox from "./pages/Inbox";
 import Conversation from "./pages/Conversation";
 import Classmates from "./pages/Classmates";
+import Settings from "./pages/Settings";
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/classmates" element={<RequireAuth><Classmates /></RequireAuth>} />
           <Route path="/inbox" element={<RequireAuth><Inbox /></RequireAuth>} />
           <Route path="/inbox/:id" element={<RequireAuth><Conversation /></RequireAuth>} />
+          <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -50,6 +52,7 @@ function Nav() {
             <Link to="/sign-in" className="text-sm font-medium">Sign in</Link>
           </SignedOut>
           <SignedIn>
+            <Link to="/settings" className="text-sm text-slate-600 hover:text-slate-900">Settings</Link>
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
         </div>
