@@ -139,3 +139,59 @@ def test_classmates_response_includes_course_titles(client, phil, db, make_user)
     rows = client.get("/api/classmates").json()
     assert rows[0]["shared_courses"][0]["title"] == "Intro to Philosophy"
     assert rows[0]["shared_courses"][0]["code"] == "PHIL 101"
+
+
+def test_classmate_dm_conversation_id_null_until_dm_exists(client, phil, db, make_user) -> None:
+    me = client.current_user
+    _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
+    other = make_user(display_name="Eitan")
+    _enroll(db, user_id=other.id, course_id=phil.id, term="Spring 2026")
+
+    rows = client.get("/api/classmates").json()
+    assert len(rows) == 1
+    assert rows[0]["dm_conversation_id"] is None
+    assert rows[0]["unread_count"] == 0
+
+
+def test_classmate_dm_conversation_id_set_after_dm_created(client, phil, db, make_user) -> None:
+    me = client.current_user
+    _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
+    other = make_user(display_name="Eitan")
+    _enroll(db, user_id=other.id, course_id=phil.id, term="Spring 2026")
+
+    # Create the DM
+    dm_id = client.post(f"/api/users/{other.id}/dm").json()["id"]
+
+    rows = client.get("/api/classmates").json()
+    assert rows[0]["dm_conversation_id"] == dm_id
+
+
+def test_classmate_unread_count_reflects_incoming_dms(client, phil, db, make_user) -> None:
+    me = client.current_user
+    _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
+    other = make_user(display_name="Eitan")
+    _enroll(db, user_id=other.id, course_id=phil.id, term="Spring 2026")
+
+    # Create DM, classmate sends two messages
+    dm_id = client.post(f"/api/users/{other.id}/dm").json()["id"]
+    client.set_user(other)
+    client.post(f"/api/conversations/{dm_id}/messages", json={"body": "yo"})
+    client.post(f"/api/conversations/{dm_id}/messages", json={"body": "ping"})
+
+    # Back to me
+    client.set_user(me)
+    rows = client.get("/api/classmates").json()
+    assert rows[0]["unread_count"] == 2
+
+
+def test_classmate_unread_excludes_my_own_outgoing(client, phil, db, make_user) -> None:
+    me = client.current_user
+    _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
+    other = make_user(display_name="Eitan")
+    _enroll(db, user_id=other.id, course_id=phil.id, term="Spring 2026")
+
+    dm_id = client.post(f"/api/users/{other.id}/dm").json()["id"]
+    client.post(f"/api/conversations/{dm_id}/messages", json={"body": "from me"})
+
+    rows = client.get("/api/classmates").json()
+    assert rows[0]["unread_count"] == 0

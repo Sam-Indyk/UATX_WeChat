@@ -154,3 +154,9 @@ class ClassmateOut(BaseModel):
     display_name: str
     avatar_url: str | None = None
     shared_courses: list[CourseOut]
+    # Populated by GET /api/classmates so the Classmates page can render
+    # an inline DM thread without an extra round-trip. null = no DM has
+    # been started with this classmate yet (clicking creates one).
+    dm_conversation_id: uuid.UUID | None = None
+    # Count of incoming messages in that DM the viewer hasn't read.
+    unread_count: int = 0

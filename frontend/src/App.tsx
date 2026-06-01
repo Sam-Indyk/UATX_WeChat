@@ -50,7 +50,7 @@ function Nav() {
         <Link to="/listings" className="text-sm text-slate-600 hover:text-slate-900">Browse</Link>
         <SignedIn>
           <Link to="/match" className="text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
-          <Link to="/classmates" className="text-sm text-slate-600 hover:text-slate-900">Classmates</Link>
+          <ClassmatesLink />
           <MyListingsLink />
           <MyInquiriesLink />
           <InboxLink />
@@ -100,6 +100,24 @@ function MyListingsLink() {
         <span
           className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
           aria-label={`${unread} unread on your listings`}
+        >
+          {unread > 99 ? "99+" : unread}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function ClassmatesLink() {
+  const { counts } = useUnread();
+  const unread = counts.dms;
+  return (
+    <Link to="/classmates" className="relative text-sm text-slate-600 hover:text-slate-900">
+      Classmates
+      {unread > 0 && (
+        <span
+          className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
+          aria-label={`${unread} unread DMs`}
         >
           {unread > 99 ? "99+" : unread}
         </span>
