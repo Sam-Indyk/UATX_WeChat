@@ -36,6 +36,8 @@ export type Listing = {
   status: ListingStatus;
   image_url: string | null;
   created_at: string;
+  // Only populated by GET /api/me/listings. 0 elsewhere.
+  unread_count: number;
 };
 
 export type MatchedListing = Listing & {

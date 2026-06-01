@@ -80,9 +80,17 @@ class ListingCreate(BaseModel):
 
 
 class ListingUpdate(BaseModel):
+    # All fields optional — Settings tab on /my-listings/:id sends only
+    # the ones that changed. Status can transition active → reserved →
+    # sold → withdrawn ("Take down" sets status='withdrawn').
     status: ListingStatus | None = None
     price_cents: int | None = Field(default=None, ge=0)
     description: str | None = Field(default=None, max_length=2000)
+    book_title: str | None = Field(default=None, min_length=1, max_length=200)
+    book_author: str | None = Field(default=None, min_length=1, max_length=200)
+    book_edition: str | None = Field(default=None, max_length=40)
+    condition: Condition | None = None
+    course_id: uuid.UUID | None = None  # set to null to unlink from a course
 
 
 class ListingOut(BaseModel):

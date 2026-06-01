@@ -67,3 +67,47 @@ def test_only_seller_can_mark_sold(client, course, make_user) -> None:
 
     r = client.patch(f"/api/listings/{listing_id}", json={"status": "sold"})
     assert r.status_code == 403
+
+
+def test_update_book_fields(client, course) -> None:
+    """The Settings tab on /my-listings/:id needs to edit title, author,
+    edition, condition, and the course assignment too — not just price
+    and status.
+    """
+    other = Course(id=uuid.uuid4(), code="MATH 201", title="Calculus I")
+    create = client.post("/api/listings", json=_payload(course.id))
+    listing_id = create.json()["id"]
+
+    r = client.patch(
+        f"/api/listings/{listing_id}",
+        json={
+            "book_title": "  Republic, 2nd ed.  ",
+            "book_author": "Plato",
+            "book_edition": "2nd",
+            "condition": "like_new",
+            "course_id": None,  # ignored — pydantic None means "not provided" in this schema
+        },
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    # Whitespace trimmed.
+    assert body["book_title"] == "Republic, 2nd ed."
+    assert body["book_author"] == "Plato"
+    assert body["book_edition"] == "2nd"
+    assert body["condition"] == "like_new"
+
+
+def test_update_status_to_withdrawn_take_down(client, course) -> None:
+    create = client.post("/api/listings", json=_payload(course.id))
+    listing_id = create.json()["id"]
+
+    r = client.patch(f"/api/listings/{listing_id}", json={"status": "withdrawn"})
+    assert r.status_code == 200
+    assert r.json()["status"] == "withdrawn"
+
+
+def test_update_rejects_bad_condition(client, course) -> None:
+    create = client.post("/api/listings", json=_payload(course.id))
+    listing_id = create.json()["id"]
+    r = client.patch(f"/api/listings/{listing_id}", json={"condition": "mint"})
+    assert r.status_code == 422
