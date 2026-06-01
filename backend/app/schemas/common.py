@@ -22,6 +22,19 @@ class UnreadCountOut(BaseModel):
     count: int
 
 
+class UnreadCountsOut(BaseModel):
+    """Per-context breakdown of unread messages for the viewer.
+
+    Drives the upcoming three-badge nav (My Listings / My Inquiries /
+    Classmates DMs) — see CLAUDE.md → Phase 2 → UX restructuring.
+    """
+
+    listings: int  # I'm the seller on these listing conversations
+    inquiries: int  # I'm the buyer on these listing conversations
+    dms: int  # direct-message conversations (no listing)
+    total: int  # listings + inquiries + dms
+
+
 class MarkReadOut(BaseModel):
     marked_read: int
 
@@ -87,6 +100,9 @@ class ListingOut(BaseModel):
     status: ListingStatus
     image_url: str | None = None
     created_at: datetime
+    # Populated by GET /api/me/listings — count of incoming messages across
+    # this listing's conversations the seller hasn't read. 0 elsewhere.
+    unread_count: int = 0
 
 
 class MatchedListingOut(ListingOut):

@@ -12,7 +12,11 @@ export default function Inbox() {
   const { request } = useApi();
   // Subscribe to the unread-count so when it changes (new message arrives,
   // or another tab marks a conversation as read), we refetch the list too.
-  const { count: navUnread } = useUnread();
+  const { counts } = useUnread();
+  // Watch the total so changes (mark-read elsewhere, new incoming) trigger
+  // an inbox refetch. Once we kill /inbox in a later PR, this whole hook
+  // call goes away.
+  const navUnread = counts.total;
 
   const [convs, setConvs] = useState<Conversation[] | null>(null);
   const [error, setError] = useState<string | null>(null);

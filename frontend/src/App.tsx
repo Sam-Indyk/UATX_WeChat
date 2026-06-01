@@ -63,7 +63,8 @@ function Nav() {
 }
 
 function InboxLink() {
-  const { count: unread } = useUnread();
+  const { counts } = useUnread();
+  const unread = counts.total;
   return (
     <Link to="/inbox" className="relative text-sm text-slate-600 hover:text-slate-900">
       Inbox
