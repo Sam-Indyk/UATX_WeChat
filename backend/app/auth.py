@@ -98,23 +98,31 @@ def _upsert_user(db: Session, claims: dict[str, Any]) -> User:
     if not user_id:
         raise HTTPException(status_code=401, detail="Token missing sub")
 
-    # Clerk session JWTs commonly include these claims. If your Clerk JWT template
-    # uses different keys, adjust here.
-    email = (
+    # Pull what the JWT gave us. Clerk's DEFAULT session token doesn't
+    # include email/name/picture — you'd have to configure a JWT template
+    # in the Clerk dashboard to add them. We code defensively for the
+    # default case.
+    raw_email = (
         claims.get("email")
         or claims.get("email_address")
         or claims.get("primary_email_address")
-        or ""
     )
+
+    # Synthesize a unique placeholder email when Clerk didn't give us one.
+    # Without this, every user past the first would 500 on signup because
+    # users.email is UNIQUE NOT NULL and we'd insert "" repeatedly.
+    # The .local TLD is reserved (RFC 6762) — no real address collides.
+    email = raw_email or f"{user_id}@clerk.local"
+
     display_name = (
         claims.get("name")
         or claims.get("full_name")
-        or (email.split("@")[0] if email else "user")
+        or (raw_email.split("@")[0] if raw_email else f"User {user_id[-6:]}")
     )
     avatar_url = claims.get("picture") or claims.get("image_url")
 
-    if email:
-        _enforce_email_domain(email)
+    if raw_email:
+        _enforce_email_domain(raw_email)
 
     user = db.get(User, user_id)
     if user is None:
