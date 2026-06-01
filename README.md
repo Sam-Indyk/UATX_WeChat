@@ -78,7 +78,11 @@ Commits from every teammate are required by the spec — coordinate so `git log`
 - **Silver:** Classmates lookup at [backend/app/routers/classmates.py](backend/app/routers/classmates.py) → `GET /api/classmates`. Real cross-table aggregation across `users` × `enrollments` (self-join on course overlap), groups results per classmate with the list of shared courses, deduplicates classmates who share multiple courses.
 - **Gold custom feature 1:** Image uploads on listings (Supabase Storage). Optional single image per listing.
 - **Gold custom feature 2:** General-purpose marketplace ("Everything Else" tab). Sell furniture, electronics, sports gear, clothing, etc. — anything between UATX students. Category filter + search.
-- **Gold "pick one":** Real-time-ish chat via polling.
+- **Gold "pick one": real-time-ish chat via polling.** `<ConversationThread>` (in [frontend/src/components/ConversationThread.tsx](frontend/src/components/ConversationThread.tsx)) polls `GET /api/conversations/:id/messages` every 4 seconds while a thread is open and merges any new message IDs into the list. When user A sends a message, user B's open thread renders it within 5s without a refresh. **Polling vs. push:** the existing chat HTTP endpoint is already the source of truth for messages; SSE/WebSockets would have required a parallel transport, server-side connection bookkeeping, and a sticky-session-friendly host. Railway's free tier doesn't love long-lived connections. Polling composes trivially with our existing `useUnread` polling pattern (which runs at 30s), uses the same auth/JWT path, and gracefully degrades on flaky networks. 4s is well under the spec's 5s ceiling.
+
+## Silver-tier behaviors worth calling out
+
+- **Optimistic message sends.** When you click Send, your message appears in the thread immediately with a dimmed bubble + "Sending…" caption. The POST then swaps the optimistic bubble for the server's confirmed message, or — if the request fails — removes the bubble and restores your typed text so you can fix-and-retry without re-typing. Lives in [`<ConversationThread>`](frontend/src/components/ConversationThread.tsx) and composes with the 4s polling: if a poll picks up the server-side version of your message between the optimistic-add and POST-resolve, the resolve handler dedupes.
 
 ## Design decisions (initial)
 
