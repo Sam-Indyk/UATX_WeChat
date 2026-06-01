@@ -14,6 +14,10 @@ class UserOut(BaseModel):
     avatar_url: str | None = None
 
 
+class MeUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=80)
+
+
 class CourseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

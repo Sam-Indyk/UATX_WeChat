@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_user
 from app.db import get_db
 from app.models import Enrollment, User
-from app.schemas.common import EnrollmentIn, EnrollmentOut, UserOut
+from app.schemas.common import EnrollmentIn, EnrollmentOut, MeUpdate, UserOut
 
 
 router = APIRouter(prefix="/api/me", tags=["me"])
@@ -13,6 +13,29 @@ router = APIRouter(prefix="/api/me", tags=["me"])
 
 @router.get("", response_model=UserOut)
 def get_me(user: User = Depends(require_user)) -> User:
+    return user
+
+
+@router.patch("", response_model=UserOut)
+def update_me(
+    payload: MeUpdate,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> User:
+    """Let the signed-in user edit their own profile.
+
+    Right now just display_name. Email is sourced from the JWT and not
+    user-editable. Avatar comes from Clerk via the JWT claims (when the
+    JWT template includes `picture`).
+    """
+    if payload.display_name is not None:
+        new_name = payload.display_name.strip()
+        if not new_name:
+            raise HTTPException(status_code=422, detail="display_name cannot be blank")
+        user.display_name = new_name
+
+    db.commit()
+    db.refresh(user)
     return user
 
 
