@@ -226,7 +226,11 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 ### Phase 2: Silver
 
 - [x] **Second nontrivial piece picked: classmates lookup.** Shipped via PR #5 — see "Piece 2 (silver)" above for the design.
-- [ ] **Unread-message notification badge.** Backend: `GET /api/me/unread-count` returning `{count: N}` (count of messages where `sender_id != viewer` and `read_at IS NULL`); `POST /api/conversations/{id}/read` to mark all messages in a conversation as read on open. Frontend: top nav polls `/api/me/unread-count` every 30s, shows a small red badge on the Inbox link if > 0; Conversation page calls the mark-read endpoint on mount. Plays well with the gold real-time chat polling piece.
+- [x] **Unread-message notification badge.** Backend: `GET /api/me/unread-count` and `POST /api/conversations/{id}/read`. Frontend: `useUnreadCount` hook polls every 30s, red badge on the Inbox nav link, Conversation page marks-read on mount. Same polling pattern the gold real-time-chat piece will use (just a shorter interval there).
+- [ ] **Classmates expansion** (per Sam's ask):
+  - **Sort by overlap count, descending.** Most-shared-courses classmate at the top of the list.
+  - **Show shared course codes under each classmate's name** (verify it's the codes like "PHIL 101, MATH 201", not just course UUIDs).
+  - **Click-to-DM from the Classmates page.** Requires a schema change: `conversations.listing_id` becomes nullable plus a way to identify a DM pair (likely an `other_user_id` column or canonicalize `(user_a, user_b)`). The existing listing-scoped chat keeps working; this adds a parallel path for direct messages without a listing. Endpoint: `POST /api/users/{user_id}/dm` (idempotent — creates or returns the existing DM). Frontend: clicking a classmate hits it then routes to `/inbox/<conv_id>`.
 - [ ] **Optimistic updates** on at least one action (posting a listing or sending a message), with rollback on failure.
 - [ ] **Bookmarkable URLs + back button** work end to end. Already mostly true via React Router; verify nothing has broken it during the bronze polish.
 - [ ] **Visual design pass** with Tailwind: type scale, color palette, spacing, deliberate components. Not just "works" — looks like someone made choices.
