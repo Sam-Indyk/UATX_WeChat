@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.routers import courses, listings, matching, me, messages
+from app.routers import classmates, courses, listings, matching, me, messages
 
 
 app = FastAPI(title="UATX_WeChat API", version="0.1.0")
@@ -31,6 +31,7 @@ app.include_router(courses.router)
 app.include_router(listings.router)
 app.include_router(messages.router)
 app.include_router(matching.router)
+app.include_router(classmates.router)
 
 
 # When deployed on Railway, FastAPI also serves the built React app at /.
