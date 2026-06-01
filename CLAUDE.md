@@ -144,35 +144,36 @@ npm run test
 
 `backend/app/routers/matching.py` → `match_listings_for_user`. For a signed-in user:
 
-1. Read the user's current enrollments (`is_current = true`).
+1. Read the user's enrollments that are either **current** or **upcoming** — those are the courses they might need books for.
 2. Find active listings whose `course_id` is in that set.
 3. Exclude the user's own listings.
 4. Rank by:
-   - **Primary:** seller's "course recency" — how recently the seller was enrolled in the same course. More recent = higher rank (book more likely the current edition).
+   - **Primary:** seller's "course recency" — how recently the seller was enrolled in the same course. More recent = higher rank (book more likely the current edition). A seller who took it last semester (status=past, recent term) outranks one who took it three years ago.
    - **Tiebreaker 1:** listing freshness (newer first).
    - **Tiebreaker 2:** lower price first.
 5. Return the ranked list with seller display name and a rationale string ("Seller took PHIL 101 in Fall 2024").
 
-Edge cases that matter: user has no current enrollments, no listings match, all matches are the user's own.
+Edge cases that matter: user has no current/upcoming enrollments, no listings match, all matches are the user's own.
 
-### Piece 2 (silver): TBD
+**Note on enrollment status:** the algorithm distinguishes three states per enrollment — `past`, `current`, `upcoming`. Buyers need books for `current` and `upcoming` courses; sellers typically have books from `past` and `current` courses they took. See the Phase 1 runway item for the schema change.
 
-Candidates:
-- **Price suggestion** when posting a listing, based on past sold listings of the same book + condition.
-- **Conversation state machine** — listings move through `active → reserved → sold`; conversations move through `inquiry → offer → counter → accepted/declined`.
-- **Graduating-seller feed** — listings whose seller has no current enrollments but a heavy course history. Decay function.
+### Piece 2 (silver): classmates lookup
 
-Pick one when we get to silver.
+`backend/app/routers/classmates.py` → `GET /api/classmates`. For a signed-in user, returns other students who share at least one of their current courses, grouped per classmate with the list of shared courses. Real cross-table aggregation across `users` × `enrollments` (self-join to find course overlap), with filters: only `is_current=true` enrollments count, the requesting user is excluded, classmates are deduplicated even when they share multiple courses.
+
+Edge cases covered in `tests/test_classmates.py`: no enrollments returns empty, past enrollments don't count, multi-course-shared classmates appear once with the full shared-courses list, the user never appears in their own classmate list.
 
 ### Gold custom features (need 2)
 
-Brainstorming bucket:
-- Saved searches with notifications.
-- Seller reputation after completed sales.
-- Bundle deals.
-- A "wanted" board.
+Our two:
 
-Pick two when we get there.
+1. **General-purpose marketplace ("Everything Else" tab).** Listings stop being book-only. A new `category` field lets users sell furniture, electronics, sports gear, clothing, etc. — anything that makes sense between UATX students. The home page grows a tab that shows non-book listings with category filters and search. The course-matching feed continues to only surface book listings tied to courses; the general marketplace is its own surface. Schema work + UI work + real category-based browsing.
+
+2. **Image uploads on listings.** Optional, single image per listing for now. Stored in Supabase Storage (we're already on Supabase). Authenticated upload (only the listing's seller). Public read URL written to a new `image_url` column on `listings`. Real concerns to handle: file size limits, MIME-type validation, what to do when no image is provided.
+
+Bonus features we already have or are likely to add:
+- **Classmates view** (already shipped — see Piece 2 above).
+- **Seller profile page** clickable from a listing — shows their other active listings and a "Message me" button.
 
 ### Gold "pick one"
 
@@ -201,37 +202,40 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 - [x] **One Vitest test.**
 - [x] **GitHub Actions CI.** Runs backend pytest + frontend vitest on every push.
 
-### Phase 1: Bronze (next)
+### Phase 1: Bronze (in progress)
 
 - [x] **Get Clerk keys.** Clerk app `related-sunbird-55` created, Google enabled, sign-in open to all Google accounts (no email-domain restriction). Keys in `frontend/.env` and `backend/.env`.
 - [x] **Create Supabase Postgres project.** `uatx-wechat` project on aws-1-us-west-1, pooler URL in Railway env vars, migrations applied (6 tables + alembic_version).
 - [x] **Deploy to Railway.** Dockerfile + railway.toml, FastAPI serves the React bundle at `/`. Live at https://uatxwechat-production.up.railway.app. CORS off in prod (same-origin). Migrations run on container start.
 - [x] **README "Live URL" filled in.**
-- [ ] **Seed UATX courses.** Script (or data migration) populating the `courses` table with the actual UATX catalog.
-- [ ] **Onboarding flow polished.** After first sign-in, redirect new users to `/onboarding` where they pick current courses. Persisted to `enrollments` with `is_current = true`.
-- [ ] **Listings: browse + filter by course.** List page hits `GET /api/listings?course_id=...`, clean grid, loading + error states.
-- [ ] **Listings: detail page.** Full info, seller name, "Message seller" button.
-- [ ] **Listings: create.** Form posts to `POST /api/listings`. (Photo upload via Supabase Storage is silver/gold.)
-- [ ] **Messaging: inbox + thread.** Inbox lists conversations; thread shows messages with a send box. No polling yet.
-- [ ] **Matching: live at `/match`.** Calls `GET /api/match`, renders ranked feed.
-- [ ] **Tests: top up to ~10.** At least one edge-case test per nontrivial endpoint.
+- [x] **Seed UATX courses.** Data migration `0002_seed_courses.py` inserts the full 2025-26 UATX catalog (167 courses across INF/ALT/EPH/STM/POL/EDU). Idempotent (`ON CONFLICT DO NOTHING`).
+- [x] **Onboarding flow polished.** Search + center-filter UI over the 167 courses, selections persist to `enrollments` with `is_current=true`.
+- [ ] **Enrollment kind: past / current / upcoming.** Replace `enrollments.is_current` (boolean) with `kind` enum (`past`, `current`, `upcoming`). Migrate existing data: rows with `is_current=true` become `current`, rows with `is_current=false` become `past` (we have no `upcoming` data yet). Update Onboarding UI to let users mark each course as one of the three states (default current). Update matching to surface books for the user's `current` AND `upcoming` courses (not just current). Update classmates to optionally include upcoming-shared classes. Add tests for the new states.
+- [~] **Smoke-test bronze end-to-end on the live URL.** First pass found: (a) SPA routing broken — backend wasn't falling back to index.html for React Router paths, breaking sign-in for fresh sessions and Clerk SSO callbacks (fixed); (b) chat untested in prod (depends on sign-in being fixed); (c) "linear algebra book missing from /match" was working as designed — `/match` excludes your own listings, you need a second account to test. Continue smoke-testing after the SPA fix lands.
+- [ ] **Search-first course pickers everywhere.** Onboarding already has a search input over the 167-course list (Eitan, PR #4). The New Listing form's course dropdown and the Listings page's course filter are still plain `<select>` elements that force you to scroll through 167 options. Factor out a `<CourseSearchPicker>` component (search input + filtered list, à la Onboarding's `useMemo` pattern) and use it everywhere we ask the user to pick a course.
+- [ ] **Listings: browse + filter by course.** Verify the existing page works against real data, polish as needed.
+- [ ] **Listings: detail page.** Verify, polish.
+- [ ] **Listings: create.** Verify, polish. Validate that course-tagged book listings save correctly.
+- [ ] **Messaging: inbox + thread.** Verify the chat UX. Polish to feel like a usable messenger (sender bubbles, timestamps, scroll-to-bottom, unread indicator?).
+- [ ] **Matching: live at `/match`.** Verify it renders, links to listings, shows the rationale.
 - [ ] **Bronze achieved** — when all of the above are ticked.
 
 ### Phase 2: Silver
 
-- [ ] Pick + build the second nontrivial piece.
-- [ ] Optimistic updates on at least one action (posting a listing or sending a message), with rollback.
-- [ ] Confirm bookmarkable URLs and back button work end to end.
-- [ ] Visual design pass with Tailwind: type scale, color palette, spacing, deliberate components.
-- [ ] Extra tests for silver behavior or one e2e-ish test (Playwright).
+- [x] **Second nontrivial piece picked: classmates lookup.** Shipped via PR #5 — see "Piece 2 (silver)" above for the design.
+- [ ] **Optimistic updates** on at least one action (posting a listing or sending a message), with rollback on failure.
+- [ ] **Bookmarkable URLs + back button** work end to end. Already mostly true via React Router; verify nothing has broken it during the bronze polish.
+- [ ] **Visual design pass** with Tailwind: type scale, color palette, spacing, deliberate components. Not just "works" — looks like someone made choices.
+- [ ] **Extra tests for silver behavior** or one e2e-ish test (Playwright) covering sign-up → post listing → message seller.
 
 ### Phase 3: Gold
 
-- [ ] Mobile pass. Every page works on phone width. No horizontal scrolling. Tap targets ≥ 44px.
-- [ ] Pick-one: real-time chat via polling (recommended), or Playwright e2e, or design with a point of view.
-- [ ] Custom feature 1: TBD.
-- [ ] Custom feature 2: TBD.
-- [ ] README updated with gold-tier description.
+- [ ] **Mobile pass.** Every page works on phone width. No horizontal scrolling. Tap targets ≥ 44px.
+- [ ] **Pick-one piece: real-time chat via polling** (recommended). `setInterval` on the open conversation hits the messages endpoint every 3-5s. When user B sends a message, user A's open thread shows it within ~5s.
+- [ ] **Custom feature 1: image uploads on listings.** Supabase Storage bucket, authenticated upload from the New Listing form, `image_url` column on `listings`, image shown on Browse + Detail pages.
+- [ ] **Custom feature 2: general-purpose marketplace ("Everything Else" tab).** Schema: add `category` enum to `listings` (`book`, `furniture`, `electronics`, `clothing`, `sports`, `other`); make book-specific fields nullable for non-book listings. Frontend: new tab on the home page that lists non-book items with category filter + search. The matching feed continues to be books-only.
+- [ ] **(Bonus, optional) Seller profile page.** Clickable from any listing — shows the seller's display name, avatar, other active listings, and a "Message me" button. Useful even if it doesn't count toward gold.
+- [ ] **README updated** with gold-tier description: both nontrivial pieces (matching + classmates), both custom features (image uploads + general marketplace), and the pick-one (real-time chat).
 
 ---
 
