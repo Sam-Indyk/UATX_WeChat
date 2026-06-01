@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiRequest } from "../lib/api";
+import CourseSearchPicker from "../components/CourseSearchPicker";
 import type { Course, Listing } from "../lib/types";
 
 export default function Listings() {
@@ -28,24 +29,18 @@ export default function Listings() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Listings</h1>
-        <select
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-          value={courseFilter}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v) setParams({ course_id: v });
-            else setParams({});
-          }}
-        >
-          <option value="">All courses</option>
-          {courses?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.code} — {c.title}
-            </option>
-          ))}
-        </select>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold shrink-0">Listings</h1>
+        <div className="w-full max-w-xs">
+          <CourseSearchPicker
+            courses={courses ?? []}
+            selectedId={courseFilter || null}
+            onChange={(id) => (id ? setParams({ course_id: id }) : setParams({}))}
+            placeholder="Filter by course…"
+            allowEmpty
+            emptyLabel="All courses"
+          />
+        </div>
       </div>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}

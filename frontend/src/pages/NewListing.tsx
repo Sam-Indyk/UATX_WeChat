@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest, useApi } from "../lib/api";
+import CourseSearchPicker from "../components/CourseSearchPicker";
 import type { Course, Listing } from "../lib/types";
 
 const CONDITIONS = ["new", "like_new", "good", "fair", "poor"] as const;
@@ -76,16 +77,14 @@ export default function NewListing() {
 
       <Field label="Course (optional)">
         {coursesError && <p className="text-red-600 text-sm">{coursesError}</p>}
-        <select
-          value={courseId}
-          onChange={(e) => setCourseId(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        >
-          <option value="">— none —</option>
-          {courses?.map((c) => (
-            <option key={c.id} value={c.id}>{c.code} — {c.title}</option>
-          ))}
-        </select>
+        <CourseSearchPicker
+          courses={courses ?? []}
+          selectedId={courseId || null}
+          onChange={(id) => setCourseId(id ?? "")}
+          placeholder="Search for a course…"
+          allowEmpty
+          emptyLabel="— no course (general item) —"
+        />
       </Field>
 
       <Field label="Book title">

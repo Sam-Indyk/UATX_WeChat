@@ -34,10 +34,13 @@ class CourseOut(BaseModel):
     title: str
 
 
+EnrollmentKind = Literal["past", "current", "upcoming"]
+
+
 class EnrollmentIn(BaseModel):
     course_id: uuid.UUID
     term: str = Field(min_length=1, max_length=20)
-    is_current: bool = False
+    kind: EnrollmentKind
 
 
 class EnrollmentOut(BaseModel):
@@ -46,7 +49,7 @@ class EnrollmentOut(BaseModel):
     id: uuid.UUID
     course: CourseOut
     term: str
-    is_current: bool
+    kind: EnrollmentKind
 
 
 Condition = Literal["new", "like_new", "good", "fair", "poor"]

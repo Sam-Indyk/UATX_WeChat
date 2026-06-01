@@ -1,5 +1,7 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_user
@@ -50,33 +52,78 @@ def list_my_enrollments(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> list[Enrollment]:
+    # Order: current first (most relevant for "books I need now"), then
+    # upcoming, then past. Within a group, most recent term first.
+    kind_order = case(
+        (Enrollment.kind == "current", 0),
+        (Enrollment.kind == "upcoming", 1),
+        (Enrollment.kind == "past", 2),
+        else_=3,
+    )
     stmt = (
         select(Enrollment)
         .options(joinedload(Enrollment.course))
         .where(Enrollment.user_id == user.id)
-        .order_by(Enrollment.is_current.desc(), Enrollment.term.desc())
+        .order_by(kind_order, Enrollment.term.desc())
     )
     return list(db.execute(stmt).scalars().all())
 
 
 @router.post("/enrollments", response_model=EnrollmentOut, status_code=201)
-def add_enrollment(
+def upsert_enrollment(
     payload: EnrollmentIn,
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> Enrollment:
+    """Create or update an enrollment.
+
+    Upserts on (user_id, course_id, term). If the row exists we update
+    the `kind`; otherwise we insert. This is what the Onboarding page
+    calls when the user changes a course from "past" to "current" etc.
+    """
+    existing = db.execute(
+        select(Enrollment).where(
+            Enrollment.user_id == user.id,
+            Enrollment.course_id == payload.course_id,
+            Enrollment.term == payload.term,
+        )
+    ).scalar_one_or_none()
+
+    if existing is not None:
+        existing.kind = payload.kind
+        db.commit()
+        db.refresh(existing, attribute_names=["course"])
+        return existing
+
     enr = Enrollment(
         user_id=user.id,
         course_id=payload.course_id,
         term=payload.term,
-        is_current=payload.is_current,
+        kind=payload.kind,
     )
     db.add(enr)
     db.commit()
     db.refresh(enr)
-    # Eager-load course for the response model
     db.refresh(enr, attribute_names=["course"])
     return enr
+
+
+@router.delete("/enrollments/{enrollment_id}", status_code=204)
+def delete_enrollment(
+    enrollment_id: uuid.UUID,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Remove an enrollment. Used when the user picks 'Not enrolled' for
+    a course in Onboarding that they had previously marked.
+    """
+    enr = db.get(Enrollment, enrollment_id)
+    if enr is None:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    if enr.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your enrollment")
+    db.delete(enr)
+    db.commit()
 
 
 @router.get("/unread-count", response_model=UnreadCountOut)

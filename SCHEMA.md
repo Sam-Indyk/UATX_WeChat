@@ -24,7 +24,7 @@ The SQLAlchemy models in `backend/app/models/` are the source of truth at the co
 - `user_id` — TEXT, FK → `users(id)` ON DELETE CASCADE.
 - `course_id` — UUID, FK → `courses(id)` ON DELETE RESTRICT.
 - `term` — TEXT, NOT NULL, length ≤ 20. E.g. `Fall 2024`, `Spring 2026`.
-- `is_current` — BOOLEAN, NOT NULL. True iff this is a course the user is currently enrolled in.
+- `kind` — TEXT, NOT NULL, one of `past`, `current`, `upcoming`. CHECK constraint enforces. Replaces the boolean `is_current` (migration 0005) so the marketplace can distinguish "I have this book to sell" (past) from "I need this book" (upcoming).
 - `created_at`.
 - **UNIQUE** (`user_id`, `course_id`, `term`) — you can't be enrolled twice in the same course in the same term.
 

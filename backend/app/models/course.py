@@ -1,11 +1,17 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, ForeignKey, Boolean, UniqueConstraint, func
+from sqlalchemy import String, DateTime, ForeignKey, CheckConstraint, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+
+
+# Three-state enrollment. `current` = taking this term, `upcoming` = will
+# take next term (so I need the book), `past` = already took it (so I
+# might sell the book).
+ENROLLMENT_KINDS = ("past", "current", "upcoming")
 
 
 class Course(Base):
@@ -24,6 +30,10 @@ class Enrollment(Base):
     __tablename__ = "enrollments"
     __table_args__ = (
         UniqueConstraint("user_id", "course_id", "term", name="uq_enrollment_user_course_term"),
+        CheckConstraint(
+            "kind IN ('past', 'current', 'upcoming')",
+            name="ck_enrollment_kind",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -34,7 +44,7 @@ class Enrollment(Base):
         UUID(as_uuid=True), ForeignKey("courses.id", ondelete="RESTRICT"), nullable=False
     )
     term: Mapped[str] = mapped_column(String(20), nullable=False)
-    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
