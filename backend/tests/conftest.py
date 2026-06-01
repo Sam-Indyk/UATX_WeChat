@@ -36,9 +36,13 @@ _TestSession = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 
 
 def _ensure_test_database() -> None:
-    """Create the test database if it doesn't exist, then create tables.
+    """Create the test database if it doesn't exist, then (re)create tables.
 
     Connects to the maintenance DB to issue CREATE DATABASE. Idempotent.
+
+    We drop_all + create_all every session so schema changes (new columns,
+    new constraints, etc.) take effect without manual cleanup between
+    branches. Test data is wiped per-test by the `db` fixture anyway.
     """
     test_url = os.environ["DATABASE_URL"]
     # Strip the database name to get a maintenance URL pointing at `postgres`.
@@ -52,6 +56,7 @@ def _ensure_test_database() -> None:
         if not exists:
             conn.execute(text(f'CREATE DATABASE "{db_name}"'))
     maintenance.dispose()
+    Base.metadata.drop_all(_engine)
     Base.metadata.create_all(_engine)
 
 

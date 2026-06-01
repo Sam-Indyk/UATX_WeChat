@@ -227,10 +227,10 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 
 - [x] **Second nontrivial piece picked: classmates lookup.** Shipped via PR #5 — see "Piece 2 (silver)" above for the design.
 - [x] **Unread-message notification badge.** Backend: `GET /api/me/unread-count` and `POST /api/conversations/{id}/read`. Frontend: `useUnreadCount` hook polls every 30s, red badge on the Inbox nav link, Conversation page marks-read on mount. Same polling pattern the gold real-time-chat piece will use (just a shorter interval there).
-- [ ] **Classmates expansion** (per Sam's ask):
-  - **Sort by overlap count, descending.** Most-shared-courses classmate at the top of the list.
-  - **Show shared course codes under each classmate's name** (verify it's the codes like "PHIL 101, MATH 201", not just course UUIDs).
-  - **Click-to-DM from the Classmates page.** Requires a schema change: `conversations.listing_id` becomes nullable plus a way to identify a DM pair (likely an `other_user_id` column or canonicalize `(user_a, user_b)`). The existing listing-scoped chat keeps working; this adds a parallel path for direct messages without a listing. Endpoint: `POST /api/users/{user_id}/dm` (idempotent — creates or returns the existing DM). Frontend: clicking a classmate hits it then routes to `/inbox/<conv_id>`.
+- [x] **Classmates expansion** (per Sam's ask). Three sub-items, all shipped:
+  - **Sort by overlap count, descending** with alphabetical-name tiebreaker.
+  - **Show shared course titles under each classmate's name** (e.g. "Intro to Philosophy"), with the code as a small annotation. User asked for names not codes.
+  - **Click-to-DM from the Classmates page.** Schema migration `0003`: `conversations.listing_id` is now nullable, plus a new `other_user_id` column (populated from `listing.seller_id` for existing listing convos and from the other party for DMs). New endpoint `POST /api/users/{other_user_id}/dm` is idempotent and canonicalizes the user pair so A→B and B→A return the same row. Frontend: classmate cards are buttons that fire the endpoint and route to `/inbox/<conv_id>`. Inbox + Conversation pages handle the nullable listing.
 - [ ] **Optimistic updates** on at least one action (posting a listing or sending a message), with rollback on failure.
 - [ ] **Bookmarkable URLs + back button** work end to end. Already mostly true via React Router; verify nothing has broken it during the bronze polish.
 - [ ] **Visual design pass** with Tailwind: type scale, color palette, spacing, deliberate components. Not just "works" — looks like someone made choices.

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_user
 from app.db import get_db
-from app.models import Conversation, Enrollment, Listing, Message, User
+from app.models import Conversation, Enrollment, Message, User
 from app.schemas.common import (
     EnrollmentIn,
     EnrollmentOut,
@@ -86,18 +86,18 @@ def my_unread_count(
 ) -> UnreadCountOut:
     """Count of messages addressed to me that I haven't seen yet.
 
-    A message is "for me" if I'm in the conversation (as buyer or as the
-    listing's seller) AND I'm not the sender. Powers the red badge on the
-    Inbox link in the top nav.
+    Includes both listing-scoped conversations and direct messages. A
+    message counts if I'm in the conversation (`buyer_id` or
+    `other_user_id`) and I'm not the sender. Powers the red badge on
+    the Inbox link in the top nav.
     """
     stmt = (
         select(func.count(Message.id))
         .join(Conversation, Message.conversation_id == Conversation.id)
-        .join(Listing, Conversation.listing_id == Listing.id)
         .where(
             Message.sender_id != user.id,
             Message.read_at.is_(None),
-            or_(Conversation.buyer_id == user.id, Listing.seller_id == user.id),
+            or_(Conversation.buyer_id == user.id, Conversation.other_user_id == user.id),
         )
     )
     count = db.execute(stmt).scalar() or 0
