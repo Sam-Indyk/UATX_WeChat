@@ -24,14 +24,21 @@ def phil(db: Session) -> Course:
     return c
 
 
-def _enroll(db: Session, *, user_id: str, course_id: uuid.UUID, term: str, current: bool = False) -> None:
+def _enroll(
+    db: Session,
+    *,
+    user_id: str,
+    course_id: uuid.UUID,
+    term: str,
+    kind: str = "past",
+) -> None:
     db.add(
         Enrollment(
             id=uuid.uuid4(),
             user_id=user_id,
             course_id=course_id,
             term=term,
-            is_current=current,
+            kind=kind,
         )
     )
     db.commit()
@@ -77,7 +84,7 @@ def test_no_enrollments_returns_empty(client) -> None:
 
 
 def test_excludes_own_listings(client, phil, db) -> None:
-    _enroll(db, user_id=client.current_user.id, course_id=phil.id, term="Spring 2026", current=True)
+    _enroll(db, user_id=client.current_user.id, course_id=phil.id, term="Spring 2026", kind="current")
     _listing(db, seller_id=client.current_user.id, course_id=phil.id)
 
     r = client.get("/api/match")
@@ -90,7 +97,7 @@ def test_excludes_non_active_and_other_courses(client, phil, db, make_user) -> N
     db.add(other_course)
     db.commit()
 
-    _enroll(db, user_id=client.current_user.id, course_id=phil.id, term="Spring 2026", current=True)
+    _enroll(db, user_id=client.current_user.id, course_id=phil.id, term="Spring 2026", kind="current")
     seller = make_user(email="seller@student.uaustin.org")
 
     sold = _listing(db, seller_id=seller.id, course_id=phil.id, status="sold")
@@ -106,7 +113,7 @@ def test_excludes_non_active_and_other_courses(client, phil, db, make_user) -> N
 
 
 def test_recent_seller_outranks_old_seller(client, phil, db, make_user) -> None:
-    _enroll(db, user_id=client.current_user.id, course_id=phil.id, term="Spring 2026", current=True)
+    _enroll(db, user_id=client.current_user.id, course_id=phil.id, term="Spring 2026", kind="current")
 
     recent_seller = make_user(email="recent@student.uaustin.org", display_name="Recent")
     old_seller = make_user(email="old@student.uaustin.org", display_name="Old")

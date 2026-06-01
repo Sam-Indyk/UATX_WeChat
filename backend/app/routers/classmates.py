@@ -30,7 +30,7 @@ def list_classmates(
         db.execute(
             select(Enrollment.course_id).where(
                 Enrollment.user_id == user.id,
-                Enrollment.is_current.is_(True),
+                Enrollment.kind == "current",
             )
         ).scalars()
     )
@@ -42,7 +42,7 @@ def list_classmates(
         .join(Enrollment, Enrollment.user_id == User.id)
         .join(Course, Course.id == Enrollment.course_id)
         .where(
-            Enrollment.is_current.is_(True),
+            Enrollment.kind == "current",
             Enrollment.course_id.in_(my_course_ids),
             User.id != user.id,
         )

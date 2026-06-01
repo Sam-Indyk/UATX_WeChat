@@ -11,11 +11,13 @@ export type Course = {
   title: string;
 };
 
+export type EnrollmentKind = "past" | "current" | "upcoming";
+
 export type Enrollment = {
   id: string;
   course: Course;
   term: string;
-  is_current: boolean;
+  kind: EnrollmentKind;
 };
 
 export type Condition = "new" | "like_new" | "good" | "fair" | "poor";

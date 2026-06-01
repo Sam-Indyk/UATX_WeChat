@@ -3,7 +3,7 @@
 Covers:
   - auth required (401 for anon)
   - empty when the signed-in user has no current enrollments
-  - non-current enrollments don't count (only is_current=True)
+  - non-current enrollments don't count (only is_kind="current")
   - the signed-in user is never included in their own classmates list
   - shared courses are grouped per user and limited to the overlap
 """
@@ -31,14 +31,21 @@ def math(db: Session) -> Course:
     return c
 
 
-def _enroll(db: Session, *, user_id: str, course_id: uuid.UUID, term: str, current: bool = True) -> None:
+def _enroll(
+    db: Session,
+    *,
+    user_id: str,
+    course_id: uuid.UUID,
+    term: str,
+    kind: str = "current",
+) -> None:
     db.add(
         Enrollment(
             id=uuid.uuid4(),
             user_id=user_id,
             course_id=course_id,
             term=term,
-            is_current=current,
+            kind=kind,
         )
     )
     db.commit()
@@ -78,7 +85,7 @@ def test_ignores_non_current_enrollments(client, phil, db, make_user) -> None:
     _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
 
     past_classmate = make_user(email="alum@student.uaustin.org")
-    _enroll(db, user_id=past_classmate.id, course_id=phil.id, term="Fall 2024", current=False)
+    _enroll(db, user_id=past_classmate.id, course_id=phil.id, term="Fall 2024", kind="past")
 
     r = client.get("/api/classmates")
     assert r.status_code == 200

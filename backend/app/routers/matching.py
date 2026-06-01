@@ -85,15 +85,17 @@ def match_listings_for_user(db: Session, user: User) -> list[_Ranked]:
     without going through HTTP, and so silver/gold variants can reuse the
     same primitives.
     """
-    # 1. Courses the user is currently enrolled in.
-    current_course_ids = list(
+    # 1. Courses the user might need books for: current OR upcoming.
+    #    Past courses are excluded — they already have those books.
+    relevant_course_ids = list(
         db.execute(
             select(Enrollment.course_id).where(
-                Enrollment.user_id == user.id, Enrollment.is_current.is_(True)
+                Enrollment.user_id == user.id,
+                Enrollment.kind.in_(["current", "upcoming"]),
             )
         ).scalars()
     )
-    if not current_course_ids:
+    if not relevant_course_ids:
         return []
 
     # 2. Active listings tied to those courses, excluding the user's own.
@@ -102,7 +104,7 @@ def match_listings_for_user(db: Session, user: User) -> list[_Ranked]:
             select(Listing)
             .options(joinedload(Listing.seller), joinedload(Listing.course))
             .where(
-                Listing.course_id.in_(current_course_ids),
+                Listing.course_id.in_(relevant_course_ids),
                 Listing.status == "active",
                 Listing.seller_id != user.id,
             )
@@ -112,7 +114,9 @@ def match_listings_for_user(db: Session, user: User) -> list[_Ranked]:
         return []
 
     # 3. For each (seller, course) pair we need, look up the seller's most
-    #    recent enrollment term. Batch the query.
+    #    recent past-or-current enrollment term. Upcoming enrollments for
+    #    the seller don't count — they haven't taken the class yet, so
+    #    they can't possibly have the book.
     seller_course_pairs = {(l.seller_id, l.course_id) for l in listings if l.course_id}
     seller_terms: dict[tuple[str, object], str] = {}
     if seller_course_pairs:
@@ -122,6 +126,7 @@ def match_listings_for_user(db: Session, user: User) -> list[_Ranked]:
             select(Enrollment.user_id, Enrollment.course_id, Enrollment.term).where(
                 Enrollment.user_id.in_(seller_ids),
                 Enrollment.course_id.in_(course_ids),
+                Enrollment.kind.in_(["past", "current"]),
             )
         ).all()
         # Keep the most-recent term for each (user, course) pair.
