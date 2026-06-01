@@ -38,13 +38,6 @@ export default function ListingDetail() {
 
   return (
     <article className="space-y-4">
-      {listing.image_url && (
-        <img
-          src={listing.image_url}
-          alt=""
-          className="w-full max-w-md rounded-lg border border-slate-200 object-cover"
-        />
-      )}
       <header>
         <h1 className="text-2xl font-semibold">{listing.book_title}</h1>
         <p className="text-slate-600">{listing.book_author}{listing.book_edition ? ` — ${listing.book_edition}` : ""}</p>
@@ -59,6 +52,23 @@ export default function ListingDetail() {
 
       {listing.description && (
         <p className="text-slate-700 whitespace-pre-wrap">{listing.description}</p>
+      )}
+
+      {listing.image_url && (
+        <figure>
+          <img
+            src={listing.image_url}
+            alt={`Photo of ${listing.book_title}`}
+            className="w-full max-w-xl rounded-lg border border-slate-200 object-contain"
+            // eslint-disable-next-line no-console
+            onError={(e) => {
+              // If Supabase Storage returns a 4xx (bucket not public, wrong
+              // key, etc.) the <img> just shows a broken icon. Surface it
+              // in DevTools so future-debug-Sam knows where to look.
+              console.warn("Listing image failed to load:", listing.image_url, e);
+            }}
+          />
+        </figure>
       )}
 
       <p className="text-sm text-slate-600">Seller: {listing.seller.display_name}</p>
