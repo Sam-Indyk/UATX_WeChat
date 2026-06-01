@@ -1,39 +1,84 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useApi } from "../lib/api";
+import { useUnread } from "../hooks/useUnreadCount";
+import ConversationThread from "../components/ConversationThread";
 import type { Classmate, Conversation } from "../lib/types";
 
+const POLL_INTERVAL_MS = 15_000;
+
+/** Classmates page, post-IA-restructuring (PR #20).
+ *
+ *  Two-pane layout: list of classmates on the left, the selected DM
+ *  thread on the right. Replaces the old grid-of-cards where clicking
+ *  a classmate navigated to /inbox/:id.
+ *
+ *  Each row carries dm_conversation_id (null if no DM yet) and
+ *  unread_count from the backend. Click → if no DM exists, POST to
+ *  create one; either way, open the thread inline via ?dm=<id>.
+ */
 export default function Classmates() {
   const { request } = useApi();
-  const navigate = useNavigate();
-  const [data, setData] = useState<Classmate[] | null>(null);
+  const { counts } = useUnread();
+  // Trigger refetch when DM unread changes (new incoming, read elsewhere).
+  const dmsBadge = counts.dms;
+
+  const [params, setParams] = useSearchParams();
+  const activeDmId = params.get("dm");
+
+  const [classmates, setClassmates] = useState<Classmate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Track which classmate's "Start chat" is in flight so we can disable
-  // just that one and avoid double-clicks creating two open requests.
   const [opening, setOpening] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refetch = useCallback(() => {
     request<Classmate[]>("/api/classmates")
-      .then(setData)
+      .then((rows) => {
+        setClassmates(rows);
+        setError(null);
+      })
       .catch((e) => setError(`Couldn't load classmates: ${String(e)}`));
   }, [request]);
 
-  async function startChat(classmateId: string) {
+  useEffect(() => {
+    refetch();
+    const id = setInterval(refetch, POLL_INTERVAL_MS);
+    const onFocus = () => refetch();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refetch]);
+
+  useEffect(() => {
+    refetch();
+  }, [dmsBadge, refetch]);
+
+  async function openClassmate(c: Classmate) {
     if (opening) return;
-    setOpening(classmateId);
+    if (c.dm_conversation_id) {
+      const next = new URLSearchParams(params);
+      next.set("dm", c.dm_conversation_id);
+      setParams(next);
+      return;
+    }
+    // No DM yet — create one, then open it.
+    setOpening(c.id);
     try {
-      const conv = await request<Conversation>(`/api/users/${classmateId}/dm`, {
-        method: "POST",
-      });
-      navigate(`/inbox/${conv.id}`);
+      const conv = await request<Conversation>(`/api/users/${c.id}/dm`, { method: "POST" });
+      const next = new URLSearchParams(params);
+      next.set("dm", conv.id);
+      setParams(next);
+      refetch(); // pull the freshly-created dm_conversation_id onto the row
     } catch (e) {
       setError(`Couldn't start chat: ${String(e)}`);
+    } finally {
       setOpening(null);
     }
   }
 
   if (error) return <p className="text-red-600">{error}</p>;
-  if (!data) return <p className="text-slate-500">Loading…</p>;
+  if (!classmates) return <p className="text-slate-500">Loading…</p>;
 
   return (
     <section className="space-y-4">
@@ -41,62 +86,89 @@ export default function Classmates() {
         <h1 className="text-2xl font-semibold">Classmates</h1>
         <p className="text-sm text-slate-600">
           Other UATX students enrolled in your current courses, ranked by how many of your
-          classes you share.
+          classes you share. Click anyone to chat.
         </p>
       </header>
 
-      {data.length === 0 && (
+      {classmates.length === 0 && (
         <p className="text-slate-500">
           No classmates yet. Make sure you've set your current courses in{" "}
           <Link to="/onboarding" className="underline">onboarding</Link>.
         </p>
       )}
 
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {data.map((c) => {
-          const isOpening = opening === c.id;
-          return (
-            <li key={c.id}>
-              <button
-                type="button"
-                onClick={() => startChat(c.id)}
-                disabled={isOpening || opening !== null}
-                className="w-full text-left rounded-lg border border-slate-200 bg-white p-4 hover:border-slate-400 disabled:opacity-60"
-              >
-                <div className="flex items-center gap-3">
-                  {c.avatar_url ? (
-                    <img
-                      src={c.avatar_url}
-                      alt=""
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-slate-200" aria-hidden />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{c.display_name}</p>
-                    <p className="text-xs text-slate-500">
-                      {c.shared_courses.length} shared course
-                      {c.shared_courses.length === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <span className="text-xs text-slate-600 shrink-0">
-                    {isOpening ? "Opening…" : "Chat"}
-                  </span>
-                </div>
-                <ul className="mt-3 space-y-1">
-                  {c.shared_courses.map((sc) => (
-                    <li key={sc.id} className="text-sm text-slate-700">
-                      {sc.title}
-                      <span className="text-xs text-slate-400 ml-1.5">{sc.code}</span>
-                    </li>
-                  ))}
-                </ul>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {classmates.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-[320px_1fr]">
+          <ul className="space-y-1 md:border-r md:border-slate-200 md:pr-3">
+            {classmates.map((c) => {
+              const isActive = c.dm_conversation_id !== null && c.dm_conversation_id === activeDmId;
+              const isOpening = opening === c.id;
+              const unread = c.unread_count;
+              return (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => openClassmate(c)}
+                    disabled={isOpening || opening !== null}
+                    className={`block w-full text-left rounded-md p-2 disabled:opacity-60 ${
+                      isActive ? "bg-slate-100" : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      {c.avatar_url ? (
+                        <img
+                          src={c.avatar_url}
+                          alt=""
+                          className="h-10 w-10 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-slate-200 shrink-0" aria-hidden />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`truncate text-sm ${unread > 0 ? "font-semibold" : "font-medium"}`}>
+                            {c.display_name}
+                          </p>
+                          {unread > 0 && (
+                            <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                              {unread > 99 ? "99+" : unread}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {c.shared_courses.length} shared course
+                          {c.shared_courses.length === 1 ? "" : "s"}
+                        </p>
+                        <ul className="mt-1 space-y-0.5">
+                          {c.shared_courses.map((sc) => (
+                            <li key={sc.id} className="text-xs text-slate-700 truncate">
+                              {sc.title}
+                              <span className="text-slate-400 ml-1.5">{sc.code}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    {isOpening && (
+                      <p className="mt-1 text-xs text-slate-500">Opening chat…</p>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="min-w-0">
+            {activeDmId ? (
+              <ConversationThread conversationId={activeDmId} />
+            ) : (
+              <p className="text-slate-500 text-sm">
+                Click a classmate on the left to start (or resume) a chat.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

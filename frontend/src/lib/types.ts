@@ -71,4 +71,10 @@ export type Classmate = {
   display_name: string;
   avatar_url: string | null;
   shared_courses: Course[];
+  // Null = no DM has been started with this classmate yet (clicking on
+  // the row will create one). Set = the existing DM's id.
+  dm_conversation_id: string | null;
+  // Incoming messages from this classmate in our DM the viewer hasn't
+  // read yet. Drives the per-row red badge.
+  unread_count: number;
 };
