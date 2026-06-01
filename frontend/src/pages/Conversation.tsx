@@ -19,6 +19,12 @@ export default function ConversationPage() {
     request<Message[]>(`/api/conversations/${id}/messages`)
       .then(setMessages)
       .catch((e) => setError(`Couldn't load messages: ${String(e)}`));
+    // Fire-and-forget mark-as-read. The nav badge updates on its next 30s
+    // poll. If the call fails we don't surface anything — at worst the
+    // user sees a stale badge for a few seconds.
+    request<{ marked_read: number }>(`/api/conversations/${id}/read`, { method: "POST" }).catch(
+      () => {},
+    );
   }, [id, request]);
 
   async function send(e: FormEvent) {

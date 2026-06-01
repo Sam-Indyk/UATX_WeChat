@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_user
 from app.db import get_db
-from app.models import Enrollment, User
-from app.schemas.common import EnrollmentIn, EnrollmentOut, MeUpdate, UserOut
+from app.models import Conversation, Enrollment, Listing, Message, User
+from app.schemas.common import (
+    EnrollmentIn,
+    EnrollmentOut,
+    MeUpdate,
+    UnreadCountOut,
+    UserOut,
+)
 
 
 router = APIRouter(prefix="/api/me", tags=["me"])
@@ -71,3 +77,28 @@ def add_enrollment(
     # Eager-load course for the response model
     db.refresh(enr, attribute_names=["course"])
     return enr
+
+
+@router.get("/unread-count", response_model=UnreadCountOut)
+def my_unread_count(
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> UnreadCountOut:
+    """Count of messages addressed to me that I haven't seen yet.
+
+    A message is "for me" if I'm in the conversation (as buyer or as the
+    listing's seller) AND I'm not the sender. Powers the red badge on the
+    Inbox link in the top nav.
+    """
+    stmt = (
+        select(func.count(Message.id))
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .join(Listing, Conversation.listing_id == Listing.id)
+        .where(
+            Message.sender_id != user.id,
+            Message.read_at.is_(None),
+            or_(Conversation.buyer_id == user.id, Listing.seller_id == user.id),
+        )
+    )
+    count = db.execute(stmt).scalar() or 0
+    return UnreadCountOut(count=count)
