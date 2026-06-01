@@ -188,8 +188,12 @@ def send_message(
 
     msg = Message(conversation_id=conv.id, sender_id=user.id, body=payload.body)
     db.add(msg)
-    # Bump updated_at so the inbox re-sorts.
-    conv.updated_at = msg.created_at or conv.updated_at
+    # Bump updated_at so the inbox re-sorts. The old version assigned
+    # msg.created_at to conv.updated_at, but msg.created_at is None
+    # pre-commit (server_default fires on INSERT only), so it was a no-op
+    # — conversations stayed at their creation timestamp regardless of
+    # message activity. Set an explicit timestamp here.
+    conv.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(msg)
     return msg
