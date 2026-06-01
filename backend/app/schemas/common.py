@@ -101,3 +101,10 @@ class ConversationOut(BaseModel):
     buyer: UserOut
     updated_at: datetime
     last_message: MessageOut | None = None
+
+
+class ClassmateOut(BaseModel):
+    id: str
+    display_name: str
+    avatar_url: str | None = None
+    shared_courses: list[CourseOut]

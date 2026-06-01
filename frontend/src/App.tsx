@@ -8,6 +8,7 @@ import Onboarding from "./pages/Onboarding";
 import Match from "./pages/Match";
 import Inbox from "./pages/Inbox";
 import Conversation from "./pages/Conversation";
+import Classmates from "./pages/Classmates";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/listings/new" element={<RequireAuth><NewListing /></RequireAuth>} />
           <Route path="/listings/:id" element={<ListingDetail />} />
           <Route path="/match" element={<RequireAuth><Match /></RequireAuth>} />
+          <Route path="/classmates" element={<RequireAuth><Classmates /></RequireAuth>} />
           <Route path="/inbox" element={<RequireAuth><Inbox /></RequireAuth>} />
           <Route path="/inbox/:id" element={<RequireAuth><Conversation /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -39,6 +41,7 @@ function Nav() {
         <Link to="/listings" className="text-sm text-slate-600 hover:text-slate-900">Browse</Link>
         <SignedIn>
           <Link to="/match" className="text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
+          <Link to="/classmates" className="text-sm text-slate-600 hover:text-slate-900">Classmates</Link>
           <Link to="/inbox" className="text-sm text-slate-600 hover:text-slate-900">Inbox</Link>
           <Link to="/listings/new" className="text-sm text-slate-600 hover:text-slate-900">Sell a book</Link>
         </SignedIn>

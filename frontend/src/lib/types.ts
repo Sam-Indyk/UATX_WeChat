@@ -56,3 +56,10 @@ export type Conversation = {
   updated_at: string;
   last_message: Message | null;
 };
+
+export type Classmate = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  shared_courses: Course[];
+};
