@@ -15,9 +15,9 @@ type Props = {
 export default function ListingSettingsForm({ listing, onChange }: Props) {
   const { request } = useApi();
 
-  const [bookTitle, setBookTitle] = useState(listing.book_title);
-  const [bookAuthor, setBookAuthor] = useState(listing.book_author);
-  const [bookEdition, setBookEdition] = useState(listing.book_edition ?? "");
+  const [title_, setTitle_] = useState(listing.title);
+  const [author_, setAuthor_] = useState(listing.author ?? "");
+  const [edition_, setEdition_] = useState(listing.edition ?? "");
   const [condition, setCondition] = useState<Condition>(listing.condition);
   const [priceCents, setPriceCents] = useState(listing.price_cents);
   const [description, setDescription] = useState(listing.description);
@@ -37,9 +37,9 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
   // When the parent refetches and re-mounts us with a different listing,
   // sync the local form state.
   useEffect(() => {
-    setBookTitle(listing.book_title);
-    setBookAuthor(listing.book_author);
-    setBookEdition(listing.book_edition ?? "");
+    setTitle_(listing.title);
+    setAuthor_(listing.author ?? "");
+    setEdition_(listing.edition ?? "");
     setCondition(listing.condition);
     setPriceCents(listing.price_cents);
     setDescription(listing.description);
@@ -54,9 +54,9 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
       await request<Listing>(`/api/listings/${listing.id}`, {
         method: "PATCH",
         body: {
-          book_title: bookTitle,
-          book_author: bookAuthor,
-          book_edition: bookEdition || null,
+          title: title_,
+          author: author_,
+          edition: edition_ || null,
           condition,
           price_cents: priceCents,
           description,
@@ -170,8 +170,8 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
 
         <Field label="Title">
           <input
-            value={bookTitle}
-            onChange={(e) => setBookTitle(e.target.value)}
+            value={title_}
+            onChange={(e) => setTitle_(e.target.value)}
             required
             maxLength={200}
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -180,8 +180,8 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
 
         <Field label="Author">
           <input
-            value={bookAuthor}
-            onChange={(e) => setBookAuthor(e.target.value)}
+            value={author_}
+            onChange={(e) => setAuthor_(e.target.value)}
             required
             maxLength={200}
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -190,8 +190,8 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
 
         <Field label="Edition (optional)">
           <input
-            value={bookEdition}
-            onChange={(e) => setBookEdition(e.target.value)}
+            value={edition_}
+            onChange={(e) => setEdition_(e.target.value)}
             maxLength={40}
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           />

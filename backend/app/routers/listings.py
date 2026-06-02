@@ -17,9 +17,20 @@ router = APIRouter(prefix="/api/listings", tags=["listings"])
 @router.get("", response_model=list[ListingOut])
 def list_listings(
     course_id: uuid.UUID | None = Query(default=None),
+    category: str | None = Query(default=None),
     status_: str = Query(default="active", alias="status"),
     db: Session = Depends(get_db),
 ) -> list[Listing]:
+    """Browse listings.
+
+    - `?category=book` → Browse page (books only).
+    - `?category=furniture,electronics,...` → not supported in this PR;
+      Everything Else filters with `?category=non-book` (a sentinel)
+      OR client passes a single non-book category at a time. The
+      simplest server semantics: if `category` is the literal string
+      `non-book`, exclude books; otherwise filter to that exact value.
+      Falls back to "all categories" when omitted (used by My Listings).
+    """
     stmt = (
         select(Listing)
         .options(joinedload(Listing.seller), joinedload(Listing.course))
@@ -28,6 +39,13 @@ def list_listings(
     )
     if course_id is not None:
         stmt = stmt.where(Listing.course_id == course_id)
+    if category == "non-book":
+        stmt = stmt.where(Listing.category != "book")
+        # Everything Else only displays items WITH an image — required at
+        # create time on the frontend. Hide ones where the upload failed.
+        stmt = stmt.where(Listing.image_url.is_not(None))
+    elif category is not None:
+        stmt = stmt.where(Listing.category == category)
     return list(db.execute(stmt).scalars().all())
 
 
@@ -50,12 +68,20 @@ def create_listing(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> Listing:
+    # Books require an author; general items don't.
+    if payload.category == "book" and not (payload.author and payload.author.strip()):
+        raise HTTPException(
+            status_code=422,
+            detail="Books must have an author. Set `author` on the request body.",
+        )
+
     listing = Listing(
         seller_id=user.id,
-        course_id=payload.course_id,
-        book_title=payload.book_title,
-        book_author=payload.book_author,
-        book_edition=payload.book_edition,
+        category=payload.category,
+        course_id=payload.course_id if payload.category == "book" else None,
+        title=payload.title.strip(),
+        author=payload.author.strip() if payload.author else None,
+        edition=payload.edition.strip() if payload.edition else None,
         condition=payload.condition,
         price_cents=payload.price_cents,
         description=payload.description,
@@ -86,16 +112,18 @@ def update_listing(
         listing.price_cents = payload.price_cents
     if payload.description is not None:
         listing.description = payload.description
-    if payload.book_title is not None:
-        listing.book_title = payload.book_title.strip()
-    if payload.book_author is not None:
-        listing.book_author = payload.book_author.strip()
-    if payload.book_edition is not None:
-        listing.book_edition = payload.book_edition.strip() or None
+    if payload.title is not None:
+        listing.title = payload.title.strip()
+    if payload.author is not None:
+        listing.author = payload.author.strip() or None
+    if payload.edition is not None:
+        listing.edition = payload.edition.strip() or None
     if payload.condition is not None:
         listing.condition = payload.condition
     if payload.course_id is not None:
         listing.course_id = payload.course_id
+    if payload.category is not None:
+        listing.category = payload.category
 
     db.commit()
     db.refresh(listing)

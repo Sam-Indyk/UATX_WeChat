@@ -39,9 +39,22 @@ export default function ListingDetail() {
   return (
     <article className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold">{listing.book_title}</h1>
-        <p className="text-slate-600">{listing.book_author}{listing.book_edition ? ` — ${listing.book_edition}` : ""}</p>
-        {listing.course && <p className="text-sm text-slate-500">{listing.course.code} · {listing.course.title}</p>}
+        <h1 className="text-2xl font-semibold">{listing.title}</h1>
+        {listing.category === "book" ? (
+          <>
+            <p className="text-slate-600">
+              {listing.author ?? "Unknown author"}
+              {listing.edition ? ` — ${listing.edition}` : ""}
+            </p>
+            {listing.course && (
+              <p className="text-sm text-slate-500">
+                {listing.course.code} · {listing.course.title}
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-slate-500 capitalize">{listing.category}</p>
+        )}
       </header>
 
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
@@ -58,7 +71,7 @@ export default function ListingDetail() {
         <figure>
           <img
             src={listing.image_url}
-            alt={`Photo of ${listing.book_title}`}
+            alt={`Photo of ${listing.title}`}
             className="w-full max-w-xl rounded-lg border border-slate-200 object-contain"
             // eslint-disable-next-line no-console
             onError={(e) => {

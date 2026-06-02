@@ -30,8 +30,8 @@ def test_inquiries_returns_my_buying_conversations(client, make_user, course, db
         id=uuid.uuid4(),
         seller_id=seller.id,
         course_id=course.id,
-        book_title="Republic",
-        book_author="Plato",
+        title="Republic",
+        author="Plato",
         condition="good",
         price_cents=1500,
         description="",
@@ -43,7 +43,7 @@ def test_inquiries_returns_my_buying_conversations(client, make_user, course, db
     rows = client.get("/api/me/inquiries").json()
     assert len(rows) == 1
     assert rows[0]["id"] == convo_id
-    assert rows[0]["listing"]["book_title"] == "Republic"
+    assert rows[0]["listing"]["title"] == "Republic"
 
 
 def test_inquiries_excludes_dms(client, make_user) -> None:
@@ -64,8 +64,8 @@ def test_inquiries_excludes_seller_side(client, make_user, course, db) -> None:
         id=uuid.uuid4(),
         seller_id=me.id,
         course_id=course.id,
-        book_title="Republic",
-        book_author="Plato",
+        title="Republic",
+        author="Plato",
         condition="good",
         price_cents=1500,
         description="",
@@ -89,8 +89,8 @@ def test_inquiries_includes_unread_count(client, make_user, course, db) -> None:
         id=uuid.uuid4(),
         seller_id=seller.id,
         course_id=course.id,
-        book_title="Republic",
-        book_author="Plato",
+        title="Republic",
+        author="Plato",
         condition="good",
         price_cents=1500,
         description="",
@@ -119,8 +119,8 @@ def test_inquiries_ordered_by_recent_activity(client, make_user, course, db) -> 
         id=uuid.uuid4(),
         seller_id=seller_a.id,
         course_id=course.id,
-        book_title="Republic",
-        book_author="Plato",
+        title="Republic",
+        author="Plato",
         condition="good",
         price_cents=1500,
         description="",
@@ -129,8 +129,8 @@ def test_inquiries_ordered_by_recent_activity(client, make_user, course, db) -> 
         id=uuid.uuid4(),
         seller_id=seller_b.id,
         course_id=course.id,
-        book_title="Meno",
-        book_author="Plato",
+        title="Meno",
+        author="Plato",
         condition="good",
         price_cents=1200,
         description="",
@@ -144,8 +144,8 @@ def test_inquiries_ordered_by_recent_activity(client, make_user, course, db) -> 
     client.post(f"/api/conversations/{conv_a}/messages", json={"body": "ping"})
 
     rows = client.get("/api/me/inquiries").json()
-    assert rows[0]["listing"]["book_title"] == "Republic"
-    assert rows[1]["listing"]["book_title"] == "Meno"
+    assert rows[0]["listing"]["title"] == "Republic"
+    assert rows[1]["listing"]["title"] == "Meno"
 
 
 def test_inquiries_requires_auth(anon_client) -> None:

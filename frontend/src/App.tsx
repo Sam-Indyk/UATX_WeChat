@@ -12,6 +12,8 @@ import Settings from "./pages/Settings";
 import MyListings from "./pages/MyListings";
 import MyListingDetail from "./pages/MyListingDetail";
 import MyInquiries from "./pages/MyInquiries";
+import EverythingElse from "./pages/EverythingElse";
+import NewItem from "./pages/NewItem";
 import { useUnread } from "./hooks/useUnreadCount";
 
 export default function App() {
@@ -35,6 +37,8 @@ export default function App() {
           <Route path="/my-listings" element={<RequireAuth><MyListings /></RequireAuth>} />
           <Route path="/my-listings/:id" element={<RequireAuth><MyListingDetail /></RequireAuth>} />
           <Route path="/my-inquiries" element={<RequireAuth><MyInquiries /></RequireAuth>} />
+          <Route path="/everything-else" element={<EverythingElse />} />
+          <Route path="/everything-else/new" element={<RequireAuth><NewItem /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -48,7 +52,8 @@ function Nav() {
     <nav className="border-b border-slate-200 bg-white">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-6">
         <Link to="/" className="font-semibold tracking-tight">UATX_WeChat</Link>
-        <Link to="/listings" className="text-sm text-slate-600 hover:text-slate-900">Browse</Link>
+        <Link to="/listings" className="text-sm text-slate-600 hover:text-slate-900">Books</Link>
+        <Link to="/everything-else" className="text-sm text-slate-600 hover:text-slate-900">Everything else</Link>
         <SignedIn>
           <Link to="/match" className="text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
           <ClassmatesLink />

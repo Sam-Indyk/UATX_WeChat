@@ -22,14 +22,38 @@ export type Enrollment = {
 
 export type Condition = "new" | "like_new" | "good" | "fair" | "poor";
 export type ListingStatus = "active" | "reserved" | "sold" | "withdrawn";
+export type ListingCategory =
+  | "book"
+  | "furniture"
+  | "electronics"
+  | "clothing"
+  | "kitchen"
+  | "decor"
+  | "sports"
+  | "transportation"
+  | "other";
+
+/** Pretty labels for the Everything Else category enum. */
+export const NON_BOOK_CATEGORIES: { value: Exclude<ListingCategory, "book">; label: string }[] = [
+  { value: "furniture", label: "Furniture" },
+  { value: "electronics", label: "Electronics" },
+  { value: "clothing", label: "Clothing" },
+  { value: "kitchen", label: "Kitchen" },
+  { value: "decor", label: "Decor" },
+  { value: "sports", label: "Sports" },
+  { value: "transportation", label: "Transportation" },
+  { value: "other", label: "Other" },
+];
 
 export type Listing = {
   id: string;
   seller: User;
   course: Course | null;
-  book_title: string;
-  book_author: string;
-  book_edition: string | null;
+  category: ListingCategory;
+  title: string;
+  // Nullable for non-book listings.
+  author: string | null;
+  edition: string | null;
   condition: Condition;
   price_cents: number;
   description: string;

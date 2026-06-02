@@ -33,18 +33,19 @@ Why `term` is a string rather than (year, season): readable in psql, fewer joins
 ### `listings`
 - `id` — UUID, PK.
 - `seller_id` — TEXT, FK → `users(id)` ON DELETE CASCADE.
-- `course_id` — UUID, FK → `courses(id)` ON DELETE RESTRICT. Nullable — a listing might be a general book not tied to a UATX course, though in practice the matching feature only uses listings with a course.
-- `book_title` — TEXT, NOT NULL, length ≤ 200.
-- `book_author` — TEXT, NOT NULL, length ≤ 200.
-- `book_edition` — TEXT, nullable, length ≤ 40.
+- `course_id` — UUID, FK → `courses(id)` ON DELETE RESTRICT. Nullable. Books set it (so the matching algorithm can find them); general items leave it NULL.
+- `category` — TEXT, NOT NULL. CHECK enforces one of: `book`, `furniture`, `electronics`, `clothing`, `kitchen`, `decor`, `sports`, `transportation`, `other`. Splits the marketplace: books (`category='book'`) live in the textbook experience and surface in matching; everything else lives under `/everything-else`.
+- `title` — TEXT, NOT NULL, length ≤ 200. Book title for books, item name for general items. (Renamed from `book_title` in migration 0006.)
+- `author` — TEXT, nullable, length ≤ 200. Required for books; NULL for general items. (Renamed from `book_author`.)
+- `edition` — TEXT, nullable, length ≤ 40. (Renamed from `book_edition`.)
 - `condition` — TEXT, NOT NULL, one of `new`, `like_new`, `good`, `fair`, `poor`. CHECK constraint enforces.
 - `price_cents` — INTEGER, NOT NULL, ≥ 0.
 - `description` — TEXT, NOT NULL, length ≤ 2000.
 - `status` — TEXT, NOT NULL, one of `active`, `reserved`, `sold`, `withdrawn`. Default `active`. CHECK enforces.
-- `image_url` — TEXT, nullable, length ≤ 500. Public URL of the listing's photo in Supabase Storage (bucket `listing-images`). NULL when the seller didn't upload one.
+- `image_url` — TEXT, nullable, length ≤ 500. Public URL of the listing's photo in Supabase Storage (bucket `listing-images`). Required at create-time for non-book listings (frontend enforces; the Everything Else browse hides rows without an image).
 - `created_at`, `updated_at`.
 
-Indexes: `(course_id, status)` for the matching query, `(seller_id, created_at DESC)` for "my listings."
+Indexes: `(course_id, status)` for the matching query, `(seller_id, created_at DESC)` for "my listings," `(category, status)` for the Everything Else browse.
 
 ### `conversations`
 - `id` — UUID, PK.

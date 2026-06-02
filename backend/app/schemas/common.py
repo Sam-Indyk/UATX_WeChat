@@ -67,13 +67,27 @@ class EnrollmentOut(BaseModel):
 
 Condition = Literal["new", "like_new", "good", "fair", "poor"]
 ListingStatus = Literal["active", "reserved", "sold", "withdrawn"]
+ListingCategory = Literal[
+    "book",
+    "furniture",
+    "electronics",
+    "clothing",
+    "kitchen",
+    "decor",
+    "sports",
+    "transportation",
+    "other",
+]
 
 
 class ListingCreate(BaseModel):
+    # 'book' (default for the Sell-a-book form) or one of the Everything
+    # Else categories. Determines which other fields are required.
+    category: ListingCategory = "book"
     course_id: uuid.UUID | None = None
-    book_title: str = Field(min_length=1, max_length=200)
-    book_author: str = Field(min_length=1, max_length=200)
-    book_edition: str | None = Field(default=None, max_length=40)
+    title: str = Field(min_length=1, max_length=200)
+    author: str | None = Field(default=None, max_length=200)
+    edition: str | None = Field(default=None, max_length=40)
     condition: Condition
     price_cents: int = Field(ge=0)
     description: str = Field(default="", max_length=2000)
@@ -86,11 +100,13 @@ class ListingUpdate(BaseModel):
     status: ListingStatus | None = None
     price_cents: int | None = Field(default=None, ge=0)
     description: str | None = Field(default=None, max_length=2000)
-    book_title: str | None = Field(default=None, min_length=1, max_length=200)
-    book_author: str | None = Field(default=None, min_length=1, max_length=200)
-    book_edition: str | None = Field(default=None, max_length=40)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    author: str | None = Field(default=None, max_length=200)
+    edition: str | None = Field(default=None, max_length=40)
     condition: Condition | None = None
     course_id: uuid.UUID | None = None  # set to null to unlink from a course
+    # Category changes are unusual but allowed (e.g., re-categorize an item).
+    category: ListingCategory | None = None
 
 
 class ListingOut(BaseModel):
@@ -99,9 +115,10 @@ class ListingOut(BaseModel):
     id: uuid.UUID
     seller: UserOut
     course: CourseOut | None = None
-    book_title: str
-    book_author: str
-    book_edition: str | None
+    category: ListingCategory
+    title: str
+    author: str | None
+    edition: str | None
     condition: Condition
     price_cents: int
     description: str
