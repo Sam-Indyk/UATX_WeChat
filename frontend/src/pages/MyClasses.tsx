@@ -24,7 +24,7 @@ const CENTERS = [
 
 type Selection = EnrollmentKind | "none";
 
-export default function Onboarding() {
+export default function MyClasses() {
   const nav = useNavigate();
   const { request } = useApi();
 
@@ -50,7 +50,7 @@ export default function Onboarding() {
         for (const enr of e) m.set(enr.course.id, enr.kind);
         setSelection(m);
       })
-      .catch((e) => setError(`Couldn't load onboarding data: ${String(e)}`));
+      .catch((e) => setError(`Couldn't load your classes: ${String(e)}`));
   }, [request]);
 
   function setKindFor(courseId: string, kind: Selection) {
@@ -124,11 +124,12 @@ export default function Onboarding() {
   return (
     <section className="space-y-4 max-w-2xl">
       <header>
-        <h1 className="text-2xl font-semibold">Your courses</h1>
+        <h1 className="text-2xl font-semibold">My classes</h1>
         <p className="text-sm text-slate-600">
-          Tell us which UATX courses you're <strong>taking now</strong> (so we can find your
+          Which UATX courses you're <strong>taking now</strong> (so we can find your
           textbooks), <strong>about to take</strong> (so we can plan ahead), and <strong>already
-          took</strong> (so we know you might have those books to sell).
+          took</strong> (so we know you might have those books to sell). Come back any time to
+          update — new semester, new class, dropped a class, etc.
         </p>
       </header>
 

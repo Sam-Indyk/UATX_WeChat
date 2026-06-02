@@ -4,7 +4,7 @@ import Home from "./pages/Home";
 import Listings from "./pages/Listings";
 import ListingDetail from "./pages/ListingDetail";
 import NewListing from "./pages/NewListing";
-import Onboarding from "./pages/Onboarding";
+import MyClasses from "./pages/MyClasses";
 import Match from "./pages/Match";
 import Conversation from "./pages/Conversation";
 import Classmates from "./pages/Classmates";
@@ -24,7 +24,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/sign-in/*" element={<SignInPage />} />
-          <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+          <Route path="/my-classes" element={<RequireAuth><MyClasses /></RequireAuth>} />
+          {/* Back-compat: Clerk's afterSignInUrl used to point here and some
+              older docs/links reference /onboarding. Redirect so nothing 404s. */}
+          <Route path="/onboarding" element={<Navigate to="/my-classes" replace />} />
           <Route path="/listings" element={<Listings />} />
           <Route path="/listings/new" element={<RequireAuth><NewListing /></RequireAuth>} />
           <Route path="/listings/:id" element={<ListingDetail />} />
@@ -55,6 +58,7 @@ function Nav() {
         <Link to="/listings" className="text-sm text-slate-600 hover:text-slate-900">Books</Link>
         <Link to="/everything-else" className="text-sm text-slate-600 hover:text-slate-900">Everything else</Link>
         <SignedIn>
+          <Link to="/my-classes" className="text-sm text-slate-600 hover:text-slate-900">My classes</Link>
           <Link to="/match" className="text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
           <ClassmatesLink />
           <MyListingsLink />
@@ -134,7 +138,7 @@ function MyInquiriesLink() {
 function SignInPage() {
   return (
     <div className="flex justify-center pt-8">
-      <SignIn routing="path" path="/sign-in" signUpUrl="/sign-in" afterSignInUrl="/onboarding" afterSignUpUrl="/onboarding" />
+      <SignIn routing="path" path="/sign-in" signUpUrl="/sign-in" afterSignInUrl="/my-classes" afterSignUpUrl="/my-classes" />
     </div>
   );
 }

@@ -16,11 +16,22 @@ export default function Match() {
 
   return (
     <section className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">For your courses</h1>
-        <p className="text-sm text-slate-600">
-          Ranked by how likely the seller's edition matches what your professor is using.
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">For your courses</h1>
+          <p className="text-sm text-slate-600">
+            Ranked by how likely the seller's edition matches what your professor is using.
+          </p>
+        </div>
+        {/* Persistent link to My classes — visible even when there ARE
+            matches, so users can jump back any time to update their
+            enrollment (per Sam's ask). */}
+        <Link
+          to="/my-classes"
+          className="text-xs text-slate-500 hover:text-slate-900 underline shrink-0 mt-1"
+        >
+          Update my classes →
+        </Link>
       </header>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
@@ -28,7 +39,7 @@ export default function Match() {
       {rows && rows.length === 0 && !error && (
         <p className="text-slate-500">
           No matches yet. Make sure you've set your current courses in{" "}
-          <Link to="/onboarding" className="underline">onboarding</Link>.
+          <Link to="/my-classes" className="underline">My classes</Link>.
         </p>
       )}
 
