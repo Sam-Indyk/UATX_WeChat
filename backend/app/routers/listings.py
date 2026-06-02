@@ -8,7 +8,12 @@ from app.auth import require_user
 from app.db import get_db
 from app.models import Conversation, Listing, Message, User
 from app.schemas.common import ConversationOut, ListingCreate, ListingOut, ListingUpdate
-from app.storage import ALLOWED_CONTENT_TYPES, MAX_FILE_SIZE_BYTES, upload_listing_image
+from app.storage import (
+    ALLOWED_CONTENT_TYPES,
+    MAX_FILE_SIZE_BYTES,
+    delete_stored_image,
+    upload_listing_image,
+)
 
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
@@ -129,6 +134,37 @@ def update_listing(
     db.refresh(listing)
     db.refresh(listing, attribute_names=["seller", "course"])
     return listing
+
+
+@router.delete("/{listing_id}", status_code=204)
+def delete_listing(
+    listing_id: uuid.UUID,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Take down a listing — fully delete it.
+
+    Cascades via ON DELETE CASCADE on conversations.listing_id, so any
+    buyer conversations + their messages also go away. The listing's
+    image (if any) is best-effort removed from Supabase Storage so we
+    don't accumulate orphaned bytes.
+
+    Only the seller can delete. This is destructive; the UI confirms
+    before calling it.
+    """
+    listing = db.get(Listing, listing_id)
+    if listing is None:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.seller_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your listing")
+
+    image_url = listing.image_url
+    db.delete(listing)
+    db.commit()
+
+    # After the row is gone, best-effort clean up the image. Doing it
+    # after commit means a failed delete doesn't roll back the row.
+    delete_stored_image(image_url)
 
 
 @router.post("/{listing_id}/image", response_model=ListingOut)

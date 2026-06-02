@@ -271,11 +271,18 @@ def my_listings(
     `unread_count` = how many incoming messages across this listing's
     conversations the seller hasn't read yet. Powers `/my-listings`.
     """
+    # Exclude withdrawn listings. "Take down" now hard-deletes the row
+    # entirely (DELETE /api/listings/:id), but if any legacy rows are
+    # sitting in status='withdrawn' from before that change, hide them
+    # from My Listings so the seller's view stays clean.
     listings = list(
         db.execute(
             select(Listing)
             .options(joinedload(Listing.seller), joinedload(Listing.course))
-            .where(Listing.seller_id == user.id)
+            .where(
+                Listing.seller_id == user.id,
+                Listing.status != "withdrawn",
+            )
             .order_by(desc(Listing.created_at))
         )
         .scalars()

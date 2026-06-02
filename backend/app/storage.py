@@ -84,6 +84,41 @@ def upload_listing_image(*, listing_id: uuid.UUID, content_type: str, data: byte
     )
 
 
+def delete_stored_image(public_url: str | None) -> None:
+    """Best-effort delete of a previously-uploaded image, given its
+    public URL. Used when a seller takes down a listing — keeps the
+    Supabase Storage bucket from accumulating orphaned bytes.
+
+    Silent on every failure mode: missing config, URL that doesn't
+    match our bucket pattern, network blip, Supabase 5xx. An orphaned
+    object is a minor space leak, not a correctness bug. Worst case
+    the bucket eventually needs a manual sweep.
+    """
+    if not public_url or not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_KEY:
+        return
+
+    prefix = (
+        f"{settings.SUPABASE_URL.rstrip('/')}/storage/v1/object/public/"
+        f"{settings.SUPABASE_STORAGE_BUCKET}/"
+    )
+    if not public_url.startswith(prefix):
+        return
+    object_path = public_url[len(prefix):]
+
+    delete_url = (
+        f"{settings.SUPABASE_URL.rstrip('/')}/storage/v1/object/"
+        f"{settings.SUPABASE_STORAGE_BUCKET}/{object_path}"
+    )
+    try:
+        httpx.delete(
+            delete_url,
+            headers={"Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"},
+            timeout=10.0,
+        )
+    except httpx.HTTPError:
+        pass
+
+
 def upload_avatar(*, user_id: str, content_type: str, data: bytes) -> str:
     """Upload a profile picture for `user_id` and return the public URL.
 
