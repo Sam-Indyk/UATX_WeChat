@@ -1,186 +1,142 @@
-# EITAN.md — onboarding for Eitan
+# EITAN.md — onboarding & handoff for Eitan
 
-Hey Eitan, welcome to **UATX_WeChat**. This doc gets you from "nothing" to "shipping code" in about 15 minutes. If anything in here is wrong or outdated, fix it as you go — keeping this current is part of working on the project.
+Hey Eitan — Sam here. I just pushed a big chunk and I'm done for the day. **It's your turn.** This doc is the handoff: what changed, what was intentional, what you should work on next. Skim it once and you should know what to touch and what to leave alone.
 
-## What this is
+Pitch + tier targets: [README.md](README.md). Conventions + the full to-do list: [CLAUDE.md](CLAUDE.md). Data model: [SCHEMA.md](SCHEMA.md). Live URL: **https://uatxwechat-production.up.railway.app**.
 
-A textbook marketplace for UATX students. The defining feature is course-history-based matching: when a freshman needs the book for PHIL 101, the app surfaces listings from upperclassmen who took PHIL 101 in past semesters.
+## What's shipped since you last worked
 
-- Live URL: **https://uatxwechat-production.up.railway.app**
-- Pitch + tier targets: [README.md](README.md)
-- Conventions + what's next: [CLAUDE.md](CLAUDE.md) — especially the **Runway** section at the bottom, which is the source of truth for "what do I work on?"
-- Data model: [SCHEMA.md](SCHEMA.md)
+Substantial chunk. A quick tour:
 
-## How we work
+- **Enrollment kinds**: courses are now tagged `past` / `current` / `upcoming`. The matching algorithm uses current + upcoming for the buyer's relevant courses, past + current for crediting sellers. `/onboarding` was renamed to `/my-classes` (more accurate — you come back every semester).
+- **Per-context chat homes**: the old `/inbox` is gone. Conversations live in three semantic places: `/my-listings` (seller view, with a Chat + Settings subtab per listing), `/my-inquiries` (buyer view of listing conversations), and `/classmates` (DMs). Each one has its own unread badge in the nav.
+- **Image uploads** on book listings + the general marketplace, via Supabase Storage. The bucket is `listing-images`, public-read. Avatars use the same bucket under `avatars/<user_id>/...`.
+- **General marketplace** ("Everything else" tab): non-book listings with categories (furniture, electronics, clothing, kitchen, decor, sports, transportation, other). Photo required at create time. Browse shows thumbnails. Books browse stays text-first.
+- **Settings page**: lets you upload an avatar and rename yourself. Hides the `@clerk.local` placeholder email row (a synthesized fallback we use when Clerk's JWT doesn't carry a real email).
+- **Real-time-ish chat via polling**: `<ConversationThread>` polls every 4s while open. New messages from the other party appear without a refresh.
+- **Optimistic message sends**: the message bubble appears immediately (dimmed, "Sending…") and either gets confirmed by the server or rolls back on failure with the input restored.
+- **Per-thread unread pills + per-listing pills + nav badges**: the whole notification picture is in sync now. Open a thread → mark-read fires → badge drops within the same second.
+- **"Take down" hard-deletes**: clicking Take Down on a listing actually removes the row (cascades to its conversations + messages) and best-effort deletes the photo from Supabase Storage. Used to set status=withdrawn which left zombies; doesn't anymore.
+- **Profile picture upload**, classmates click-to-DM, per-classmate unread, search-first course pickers in NewListing + Listings filter, and a "My classes" nav link plus a persistent "Update my classes →" link in the For-my-courses header.
 
-We mostly drive via Claude (Anthropic's CLI agent), sequentially — one teammate at a time. The flow:
+**115 backend tests, all green. Frontend type-check clean.**
 
-1. Pull `main`.
-2. Open the Runway in CLAUDE.md.
-3. Find the next undone item (`[ ]`).
-4. Do it. Tick it (`[x]`). Commit on a feature branch.
-5. PR to `main`. CI runs. When it goes green, Sam (or you, once we trust each other on the codebase) merges.
-6. Railway auto-deploys on merge.
+## Decisions to respect (don't accidentally undo these)
 
-Commits from every teammate are required by the assignment spec — so when you pick up the next item, do real, attributable work on your account.
+These were deliberate calls. If you find yourself "fixing" one, double-check that the fix isn't reverting an intentional choice.
 
-## Step 1: Get access
+| Decision | Why |
+|---|---|
+| **No `/inbox` page** | Each chat type has its own home now. The catch-all was confusing — you couldn't tell at a glance what kind of conversation a row was. `/inbox/:id` still works as a back-compat redirect for old links. |
+| **Three per-context nav badges** instead of one | Users want to know *which* kind of unread they have. Sourced from one batched `GET /api/me/unread-counts` so it's cheap. |
+| **Books browse has no inline thumbnails** | Books are recognizable by title + author + course code. Click into the listing to see the cover. Keeps Books and Everything Else visually distinct. |
+| **Everything Else hides image-less listings** | The grid is image-heavy by design; rows without a photo would look broken. Backend filters them out of `GET /api/listings?category=non-book`. |
+| **You can't post a non-book from "Sell a book"** | Two separate forms (`/listings/new` and `/everything-else/new`), each with the category fixed. Sam wanted strict separation. |
+| **Take down = hard delete** | Withdrawn listings used to accumulate (and their Supabase Storage images). Now Take Down deletes the row and the photo. UI confirms first. |
+| **Polling, not WebSockets** | Chat refreshes every 4s; nav badge every 30s. Railway's free tier doesn't love long-lived connections, and HTTP composes with everything else we already have. |
+| **Optimistic sends with rollback** | Snappy feel + handles network failure cleanly. Don't disable the send input — multiple optimistic sends in flight is fine. |
+| **`@clerk.local` placeholder emails hidden in UI** | We synthesize them when Clerk's JWT has no email claim. Showing them to users confuses them. Configure a Clerk JWT template (see CLAUDE.md → Auth section) to get real emails. |
+| **`conversations.updated_at` bumps on each message** | Silver hit a latent bug here — the old code assigned `msg.created_at` which is None pre-commit (no-op). Now uses `datetime.now(timezone.utc)` explicitly. Don't "simplify" it back. |
+| **Browser back/forward fully works** | Every page that has internal state (tab, selected conversation, filter) uses URL search params. Refreshing or bookmarking preserves state. |
 
-Ask Sam to:
+## Where we are on the tier checklist
 
-- Add you as a **Collaborator** on https://github.com/Sam-Indyk/UATX_WeChat (so you can push branches and open PRs — `main` is protected, no direct pushes).
-- (Optional) Invite you to the **Railway** project and the **Supabase** project. You don't need either for local development, but they're useful if you want to look at production logs or run a SQL query against the cloud DB.
-
-## Step 2: Install prerequisites
-
-- **Python 3.12** — pinned for CI; 3.14 also works in practice.
-- **Node 20** or newer.
-- **Docker Desktop** — for the local Postgres container.
-- **Git**, and ideally the **GitHub CLI** (`gh`) for opening PRs from the terminal.
-
-## Step 3: Clone and run it locally
-
-```bash
-git clone https://github.com/Sam-Indyk/UATX_WeChat.git
-cd UATX_WeChat
-docker compose up -d        # boots Postgres 16 on localhost:5432
+```
+Bronze   [x] all invariants
+Silver   [x] second nontrivial piece (classmates lookup)
+         [x] optimistic message sends
+         [x] bookmarkable URLs + back button
+         [ ] visual design pass               ← YOUR JOB
+         [ ] e2e Playwright test
+Gold     [ ] mobile pass                       ← YOUR JOB
+         [x] pick-one: real-time chat via polling
+         [x] custom feature 1: image uploads
+         [x] custom feature 2: general marketplace
+         [ ] README gold-tier description update
 ```
 
-### Backend
+We're one big visual/mobile push and one README pass away from full gold.
+
+## Your job — MVP
+
+**Two things, in this order:**
+
+### 1. Mobile pass (gold-tier requirement)
+
+Sam will be opening the live URL on his phone when he tests. Every page needs to work at phone width. Specifically:
+
+- No horizontal scrolling on any page.
+- Tap targets ≥ 44px (so a finger can hit them).
+- **Two-pane chat layouts** (`/my-listings/:id?tab=chat`, `/my-inquiries`, `/classmates`) need a mobile collapse strategy. Options: hide the list when a thread is open + show a "← back to list" link; or use a slide-over panel. Pick whichever you can ship cleanly.
+- The top nav has a lot of links now (6 signed-in: My classes, For my courses, Classmates, My listings, My inquiries, Sell a book). Will overflow on phones. Consider a hamburger menu at narrow widths.
+- **Camera capture from the phone**: file inputs already work on mobile, but adding `capture="environment"` to image inputs lets users open the phone camera directly instead of going through the gallery. Big UX win for marketplace photos. Apply to: NewItem.tsx, NewListing.tsx photo field, ListingSettingsForm photo upload, Settings avatar upload.
+
+### 2. Visual design with a point of view (silver requirement, also feeds gold)
+
+Right now the app is unstyled Tailwind defaults — black-on-white, slate borders. Functional but no aesthetic. Sam's preference: **minimalist** — clean type, generous whitespace, restrained color, no decoration for decoration's sake. Don't go heavy.
+
+Concrete suggestions (you choose the actual direction):
+- Pick a 2-color accent palette beyond slate. Maybe a single brand color (warm orange? cool blue?) used sparingly for primary actions.
+- Type scale: pick three sizes and stick to them. The current code has font sizes scattered between `text-xs`, `text-sm`, `text-base`, `text-lg`, `text-xl`, `text-2xl` — that's too many.
+- Consistent spacing rhythm. The cards in My Listings, My Inquiries, Everything Else, Browse all use slightly different paddings.
+- Empty states feel a bit grim ("No listings yet."). A bit of warmth without being twee.
+- Consider **collapsing pages** to reduce the nav. For instance: My Listings + My Inquiries could be one "Activity" page with two tabs. The point: fewer top-level destinations, cleaner mental model. Sam's open to consolidating if you have a coherent take.
+
+**Don't redesign the data model or the API.** Visual changes only — Tailwind classes, layout primitives, maybe shared component extraction. If you want to add a real component library (Headless UI? Radix?) that's fine, but consider whether the minimalist direction needs one.
+
+## Nice-to-haves if you have extra time
+
+Listed roughly in priority order. None of these block gold; all of them would make the demo more impressive.
+
+1. **Stripe payments.** Buyer agrees to pay → seller okays the payment → buyer confirms receipt → funds release. Three-step state machine fits the conversation state pattern. Stripe Connect for marketplace flows; standalone or test-mode is fine for the demo. Adds real-world weight to the project. Big feature; only start if mobile + visual are solid.
+2. **Negotiation in chat.** Inline "offer / counter-offer / accept / decline" actions in the conversation thread. Real state machine, ties into the listing's `status` field (active → reserved → sold). Smaller than Stripe but still a chunky feature.
+3. **"Bulletin board"** — after a completed purchase, the buyer and seller take a photo together that gets posted to a public feed. Nice community touch. Smallest of the three.
+4. **Take-photo-from-phone** (covered above under the mobile pass — already MVP, not extra).
+
+## Quick setup refresher
+
+If your local checkout is stale (which it probably is — a lot has changed):
 
 ```bash
+git checkout main
+git pull
+docker compose up -d                          # if Postgres isn't already running
 cd backend
-python -m venv .venv
+.venv\Scripts\activate                        # or your venv equivalent
+pip install -r requirements.txt               # in case new deps
+alembic upgrade head                          # apply migrations 0001-0006
+pytest -q                                     # 115 tests should pass
 
-# Windows:
-.venv\Scripts\activate
-# mac/linux:
-# source .venv/bin/activate
-
-pip install -r requirements.txt
-
-# Windows:
-copy .env.example .env
-# mac/linux:
-# cp .env.example .env
+cd ../frontend
+npm install                                   # in case new deps
+npm run dev                                   # http://localhost:5173
 ```
 
-Open `backend/.env` in your editor and **replace the Clerk lines** with these (they're public — not secrets):
+Frontend `.env`: same Clerk publishable key as before, plus `VITE_API_URL=http://localhost:8000`.
 
-```
-CLERK_JWKS_URL=https://related-sunbird-55.clerk.accounts.dev/.well-known/jwks.json
-CLERK_ISSUER=https://related-sunbird-55.clerk.accounts.dev
-CLERK_AUDIENCE=
-ALLOWED_EMAIL_DOMAINS=
-```
+Backend `.env`: same Clerk URLs, same local Postgres URL. The Supabase Storage vars (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`) only matter for production image uploads — locally, the upload endpoint returns 503 if those aren't set, but you can develop the UI around it just fine.
 
-> **"But aren't those secret-looking?"** Clerk's JWKS URL is a *public* key endpoint by design — anyone can fetch it. The actual Clerk *secret* key (the one that would matter) doesn't exist in this codebase because we never need server-to-Clerk calls; we only verify JWTs, which is a public-key operation.
+## Work flow
 
-Then:
+Same as before. Branch off main, work on one feature at a time, PR, watch CI, merge. The runway in [CLAUDE.md](CLAUDE.md) is still the source of truth for "what's next" — tick items as you finish them.
 
-```bash
-alembic upgrade head        # creates the schema in your local Postgres
-uvicorn app.main:app --reload
-```
+**`main` is protected** — push to a branch, open a PR, let CI go green, then merge. PRs from your account give the project the multi-teammate `git log` it needs for the assignment spec.
 
-You should see the API on http://localhost:8000, with Swagger UI at http://localhost:8000/docs.
+## Conventions you should still keep in mind
 
-### Frontend
-
-In a **separate terminal**:
-
-```bash
-cd frontend
-npm install
-
-# Windows:
-copy .env.example .env
-# mac/linux:
-# cp .env.example .env
-```
-
-Open `frontend/.env` and replace with:
-
-```
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_cmVsYXRlZC1zdW5iaXJkLTU1LmNsZXJrLmFjY291bnRzLmRldiQ
-VITE_API_URL=http://localhost:8000
-```
-
-(The publishable key is literally meant to be public — every Clerk-using site ships it in their bundle.)
-
-Then:
-
-```bash
-npm run dev
-```
-
-Visit http://localhost:5173 and sign in with any Google account.
-
-## Step 4: Run the tests
-
-```bash
-# Backend
-cd backend
-pytest                      # ~15 tests, all should pass
-
-# Frontend
-cd frontend
-npm run test                # 2 tests
-```
-
-If anything fails on a clean checkout, that's a real bug. Mention it to Sam.
-
-## Step 5: Pick a task
-
-Open [CLAUDE.md](CLAUDE.md), scroll to **Runway**, find the first `[ ]` item. As of the time this doc was written, the top of the to-do list is:
-
-- Seed UATX courses (the `courses` table is empty; the onboarding page has nothing to show)
-- Polished onboarding flow
-- Listings: browse + create
-- Messaging UI
-- Matching feed
-
-Pick one. If two of you are about to pick the same thing, talk first.
-
-## Step 6: Commit + PR
-
-```bash
-git checkout main && git pull
-git checkout -b feat/your-thing          # or fix/your-thing
-
-# do work, then:
-git add <specific files>                 # NOT `git add -A` — risks committing .env
-git commit -m "Short, clear message"
-git push -u origin feat/your-thing
-gh pr create                             # or use the GitHub web UI
-```
-
-CI runs automatically. **Both jobs (backend pytest + frontend vitest) must go green before merge.** Sam reviews and merges.
-
-## Step 7: What happens after merge
-
-1. GitHub Actions re-runs CI on the merged `main`.
-2. Railway detects the new `main`, rebuilds the Dockerfile, redeploys.
-3. The container's entrypoint runs `alembic upgrade head` against the Supabase DB, then starts uvicorn.
-4. Within ~3 minutes the change is live at https://uatxwechat-production.up.railway.app.
-
-If a deploy goes sideways, Railway's **Deployments → [latest] → Application Logs** tab is where to look.
-
-## Conventions you should internalize
-
-Skim [CLAUDE.md](CLAUDE.md) for the full set. The ones that matter most:
-
-- **Every fetch needs a visible loading state AND a visible error state.** "I'll add it later" means "I'll forget."
-- **Real foreign keys, not denormalized name columns.** Join to `users` for a seller name — don't add `seller_name` to `listings`.
-- **No SQLite in dev** — use the Docker Postgres so dev and prod match.
-- **User identity is the verified Clerk JWT, full stop.** No `X-Username` headers, no usernames in query strings.
-- **Don't commit `.env`.** It's gitignored — but verify with `git status` before pushing.
-- **Don't `print()` for debugging in committed code.** Remove it or use `logging` before the PR.
+- Loading + error states on every fetch.
+- Real foreign keys, no denormalized name columns.
+- No SQLite in dev — use Docker Postgres.
+- User identity = verified Clerk JWT, never a header or query param.
+- Don't commit `.env`.
+- No `print()` for debugging in committed code.
+- **Don't break the URL bookmarking story.** Refresh + back button working everywhere is a silver-tier deliverable that's already done. Don't introduce client-side-only state for things users would expect to be linkable.
 
 ## When stuck
 
-1. Search the codebase before asking — most patterns already have a precedent in `routers/`, `pages/`, or `tests/`.
-2. The runway in CLAUDE.md tracks decisions. If a step's intent is ambiguous, check its acceptance criteria.
-3. Sam: sindyk@student.uaustin.org. He'll get back to you fast.
+1. Search the codebase first — most patterns have precedent (e.g., file uploads, polling, optimistic updates, subtab routing).
+2. CLAUDE.md → Runway has acceptance criteria for most items.
+3. The git log is dense but useful — each PR's commit message has a "WHY this design" section.
+4. Sam: sindyk@student.uaustin.org.
 
-Welcome aboard.
+Have fun. The product is in good shape; you mostly get to make it look good and feel right on a phone.
