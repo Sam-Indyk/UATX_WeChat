@@ -81,7 +81,7 @@ users 1 ─── n messages (as sender)
 
 ## Things deliberately NOT in the schema yet
 
-- **Photos on listings.** Adding when we wire up Supabase Storage in silver/gold.
-- **Ratings / reputation.** Likely a gold custom feature.
-- **Saved searches.** Likely a gold custom feature.
-- **Soft-delete.** We hard-delete via CASCADE. If a teammate needs an audit trail later, switch to a `deleted_at` column then.
+- **Ratings / reputation.** Considered as a gold extension; not built.
+- **Saved searches.** Considered as a gold extension; not built.
+- **Payments / escrow.** A Stripe Connect three-step state machine (buyer pays → seller okays → buyer confirms receipt) is on the nice-to-have list — see [EITAN.md](EITAN.md). Would add a `payments` table and a couple of conversation-state columns.
+- **Soft-delete.** We hard-delete via CASCADE — `DELETE /api/listings/:id` ("Take down") removes the listing, its conversations + messages, and best-effort deletes its Supabase Storage image. If a teammate needs an audit trail later, switch to a `deleted_at` column then.

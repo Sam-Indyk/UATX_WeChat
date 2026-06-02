@@ -5,7 +5,7 @@ A marketplace and chat app for UATX students to buy and sell used textbooks from
 - **Live URL:** https://uatxwechat-production.up.railway.app
 - **GitHub:** https://github.com/Sam-Indyk/UATX_WeChat
 - **Tier targeted:** Gold
-- **Status:** Phase 0 done. Phase 1 (Bronze) in progress — core marketplace + chat scaffolded and deployed, smoke-test + enrollment-state work next. Silver "second nontrivial piece" (classmates) already shipped. See [CLAUDE.md](CLAUDE.md) → Runway for the live to-do.
+- **Status:** Bronze + Silver shipped. Gold mostly there — both custom features (image uploads, general marketplace) and the pick-one (real-time chat via polling) are live; mobile pass + visual design pass are the remaining gold-tier work. See [CLAUDE.md](CLAUDE.md) → Runway for the live to-do.
 - **Onboarding a teammate?** Have them read [EITAN.md](EITAN.md).
 
 ## How to read this repo
@@ -66,8 +66,8 @@ npm run test
 
 | Person | Email | Focus |
 |---|---|---|
-| Sam Indyk | sindyk@student.uaustin.org | Repo owner, currently driving Phase 0 |
-| _teammate 2_ | _TBD_ | _TBD_ |
+| Sam Indyk | sindyk@student.uaustin.org | Repo owner. Built Bronze + Silver + Gold-tier backend / IA / chat / marketplace. |
+| Eitan | _TBD_ | Mobile pass + visual design pass (see [EITAN.md](EITAN.md)). |
 | _teammate 3 (optional)_ | _TBD_ | _TBD_ |
 
 Commits from every teammate are required by the spec — coordinate so `git log` reflects real participation.
@@ -92,4 +92,5 @@ Commits from every teammate are required by the spec — coordinate so `git log`
 
 ## Where coding agents helped, where we pushed back
 
-(To be filled in over the project — see README question 6 in the spec.)
+- **Helped:** scaffolding (FastAPI + SQLAlchemy + Alembic + Vite + Tailwind), boilerplate routers + Pydantic schemas, the matching ranking query, the per-context unread-count SQL (one query with three SUM(CASE) clauses), and the IA restructuring across PRs #17–#22 (per-context chat homes, optimistic sends, polling). Generally fast at "translate this design into idiomatic code in this stack."
+- **Pushed back:** initial passes leaned on suspicious shortcuts — mocking the DB in tests, an `X-Username` header for auth, SQLite for local dev. All explicitly forbidden in CLAUDE.md and reverted on review. Also caught a latent `conversations.updated_at` bug where assigning `msg.created_at` (None pre-commit) was a no-op — fix is to use `datetime.now(timezone.utc)` explicitly. A few times an agent invented imports or APIs that didn't exist; CI caught those.
