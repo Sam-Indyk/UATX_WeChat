@@ -93,7 +93,7 @@ export default function Classmates() {
       {classmates.length === 0 && (
         <p className="text-slate-500">
           No classmates yet. Make sure you've set your current courses in{" "}
-          <Link to="/onboarding" className="underline">onboarding</Link>.
+          <Link to="/my-classes" className="underline">My classes</Link>.
         </p>
       )}
 
