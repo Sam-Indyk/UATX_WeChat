@@ -21,8 +21,10 @@ export default function Listings() {
   useEffect(() => {
     setListings(null);
     setError(null);
-    const qs = courseFilter ? `?course_id=${encodeURIComponent(courseFilter)}` : "";
-    apiRequest<Listing[]>(`/api/listings${qs}`)
+    // Browse is the BOOKS-only home now. Non-books live in /everything-else.
+    const params = new URLSearchParams({ category: "book" });
+    if (courseFilter) params.set("course_id", courseFilter);
+    apiRequest<Listing[]>(`/api/listings?${params.toString()}`)
       .then(setListings)
       .catch((e) => setError(`Couldn't load listings: ${String(e)}`));
   }, [courseFilter]);
@@ -54,20 +56,15 @@ export default function Listings() {
           <li key={l.id}>
             <Link
               to={`/listings/${l.id}`}
-              className="block overflow-hidden rounded-lg border border-slate-200 bg-white hover:border-slate-400"
+              className="block rounded-lg border border-slate-200 bg-white p-4 hover:border-slate-400"
             >
-              {l.image_url && (
-                <img
-                  src={l.image_url}
-                  alt=""
-                  className="w-full h-40 object-cover"
-                  loading="lazy"
-                />
-              )}
-              <div className="flex justify-between gap-2 p-4">
-                <div>
-                  <p className="font-medium">{l.book_title}</p>
-                  <p className="text-sm text-slate-600">{l.book_author}</p>
+              {/* No inline image on Browse — books are recognizable by
+                  title + author + course. Click into the listing to
+                  see the cover photo (if any). Per Sam's spec. */}
+              <div className="flex justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{l.title}</p>
+                  <p className="text-sm text-slate-600 truncate">{l.author ?? "Unknown author"}</p>
                   {l.course && (
                     <p className="text-xs text-slate-500 mt-1">{l.course.code}</p>
                   )}

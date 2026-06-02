@@ -17,9 +17,9 @@ def course(db: Session) -> Course:
 def _payload(course_id: uuid.UUID, **overrides) -> dict:
     base = {
         "course_id": str(course_id),
-        "book_title": "Republic",
-        "book_author": "Plato",
-        "book_edition": None,
+        "title": "Republic",
+        "author": "Plato",
+        "edition": None,
         "condition": "good",
         "price_cents": 1500,
         "description": "Lightly used.",
@@ -47,14 +47,14 @@ def test_list_listings_filters_by_course(client, course, db: Session) -> None:
     db.add(other)
     db.commit()
 
-    client.post("/api/listings", json=_payload(course.id, book_title="Republic"))
-    client.post("/api/listings", json=_payload(other.id, book_title="Stewart Calculus"))
+    client.post("/api/listings", json=_payload(course.id, title="Republic"))
+    client.post("/api/listings", json=_payload(other.id, title="Stewart Calculus"))
 
     r = client.get(f"/api/listings?course_id={course.id}")
     assert r.status_code == 200
     rows = r.json()
     assert len(rows) == 1
-    assert rows[0]["book_title"] == "Republic"
+    assert rows[0]["title"] == "Republic"
 
 
 def test_only_seller_can_mark_sold(client, course, make_user) -> None:
@@ -81,9 +81,9 @@ def test_update_book_fields(client, course) -> None:
     r = client.patch(
         f"/api/listings/{listing_id}",
         json={
-            "book_title": "  Republic, 2nd ed.  ",
-            "book_author": "Plato",
-            "book_edition": "2nd",
+            "title": "  Republic, 2nd ed.  ",
+            "author": "Plato",
+            "edition": "2nd",
             "condition": "like_new",
             "course_id": None,  # ignored — pydantic None means "not provided" in this schema
         },
@@ -91,9 +91,9 @@ def test_update_book_fields(client, course) -> None:
     assert r.status_code == 200, r.text
     body = r.json()
     # Whitespace trimmed.
-    assert body["book_title"] == "Republic, 2nd ed."
-    assert body["book_author"] == "Plato"
-    assert body["book_edition"] == "2nd"
+    assert body["title"] == "Republic, 2nd ed."
+    assert body["author"] == "Plato"
+    assert body["edition"] == "2nd"
     assert body["condition"] == "like_new"
 
 

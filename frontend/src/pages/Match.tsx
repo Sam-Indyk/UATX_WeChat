@@ -41,8 +41,8 @@ export default function Match() {
             >
               <div className="flex justify-between gap-3">
                 <div>
-                  <p className="font-medium">{l.book_title}</p>
-                  <p className="text-sm text-slate-600">{l.book_author}</p>
+                  <p className="font-medium">{l.title}</p>
+                  <p className="text-sm text-slate-600">{l.author}</p>
                   <p className="text-xs text-slate-500 mt-1 italic">{l.rationale}</p>
                 </div>
                 <div className="text-right shrink-0">

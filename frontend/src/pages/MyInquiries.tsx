@@ -104,7 +104,7 @@ export default function MyInquiries() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className={`truncate text-sm ${unread > 0 ? "font-semibold" : "font-medium"}`}>
-                            {c.listing?.book_title ?? "Direct message"}
+                            {c.listing?.title ?? "Direct message"}
                           </p>
                           {unread > 0 && (
                             <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">

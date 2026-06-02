@@ -60,8 +60,8 @@ export default function MyListingDetail() {
             <span className="text-slate-400">·</span>
             <span className="text-slate-500 capitalize">{listing.status}</span>
           </div>
-          <h1 className="text-2xl font-semibold mt-1">{listing.book_title}</h1>
-          <p className="text-sm text-slate-600">{listing.book_author}</p>
+          <h1 className="text-2xl font-semibold mt-1">{listing.title}</h1>
+          <p className="text-sm text-slate-600">{listing.author}</p>
         </div>
       </header>
 

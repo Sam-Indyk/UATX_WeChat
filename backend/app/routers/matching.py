@@ -98,7 +98,9 @@ def match_listings_for_user(db: Session, user: User) -> list[_Ranked]:
     if not relevant_course_ids:
         return []
 
-    # 2. Active listings tied to those courses, excluding the user's own.
+    # 2. Active BOOK listings tied to those courses, excluding the user's
+    #    own. Non-book general-marketplace listings aren't course-matched
+    #    — they live in the Everything Else tab.
     listings = list(
         db.execute(
             select(Listing)
@@ -106,6 +108,7 @@ def match_listings_for_user(db: Session, user: User) -> list[_Ranked]:
             .where(
                 Listing.course_id.in_(relevant_course_ids),
                 Listing.status == "active",
+                Listing.category == "book",
                 Listing.seller_id != user.id,
             )
         ).scalars()
@@ -174,13 +177,15 @@ def get_match_feed(
             id=r.listing.id,
             seller=r.listing.seller,
             course=r.listing.course,
-            book_title=r.listing.book_title,
-            book_author=r.listing.book_author,
-            book_edition=r.listing.book_edition,
+            category=r.listing.category,
+            title=r.listing.title,
+            author=r.listing.author,
+            edition=r.listing.edition,
             condition=r.listing.condition,
             price_cents=r.listing.price_cents,
             description=r.listing.description,
             status=r.listing.status,
+            image_url=r.listing.image_url,
             created_at=r.listing.created_at,
             rationale=r.rationale(),
             score=round(r.score, 3),

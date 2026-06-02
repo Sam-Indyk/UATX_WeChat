@@ -1,24 +1,27 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiRequest, useApi } from "../lib/api";
-import CourseSearchPicker from "../components/CourseSearchPicker";
-import type { Course, Listing } from "../lib/types";
+import { useApi } from "../lib/api";
+import type { Condition, Listing, ListingCategory } from "../lib/types";
+import { NON_BOOK_CATEGORIES } from "../lib/types";
 
-const CONDITIONS = ["new", "like_new", "good", "fair", "poor"] as const;
+const CONDITIONS: Condition[] = ["new", "like_new", "good", "fair", "poor"];
 
-export default function NewListing() {
+/** Create-listing form for the Everything Else marketplace. Distinct from
+ *  /listings/new (which is books-only) by design — Sam wants strict
+ *  separation: you can only post non-book items from this entrypoint.
+ *
+ *  Photo is REQUIRED here (unlike the book form where it's optional)
+ *  because the Everything Else browse renders the image inline, and a
+ *  listing without one is hidden from the browse. We enforce client-side.
+ */
+export default function NewItem() {
   const nav = useNavigate();
   const { request } = useApi();
 
-  const [courses, setCourses] = useState<Course[] | null>(null);
-  const [coursesError, setCoursesError] = useState<string | null>(null);
-
-  const [courseId, setCourseId] = useState("");
+  const [category, setCategory] = useState<Exclude<ListingCategory, "book">>("furniture");
   const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [edition, setEdition] = useState("");
-  const [condition, setCondition] = useState<typeof CONDITIONS[number]>("good");
-  const [priceCents, setPriceCents] = useState(1500);
+  const [condition, setCondition] = useState<Condition>("good");
+  const [priceCents, setPriceCents] = useState(2000);
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -26,105 +29,99 @@ export default function NewListing() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    apiRequest<Course[]>("/api/courses").then(setCourses).catch((e) =>
-      setCoursesError(`Couldn't load courses: ${String(e)}`),
-    );
-  }, []);
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!image) {
+      setImageError("A photo is required for marketplace items.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
       const listing = await request<Listing>("/api/listings", {
         method: "POST",
         body: {
-          category: "book",
-          course_id: courseId || null,
-          title: title,
-          author: author,
-          edition: edition || null,
+          category,
+          // No course_id, no author/edition — backend strips them anyway
+          // for non-book categories, but we don't even send them.
+          title,
           condition,
           price_cents: priceCents,
           description,
         },
       });
-      // If the user picked an image, upload it now. Failure here is
-      // non-fatal: the listing is already created, we just couldn't
-      // attach the photo. Surface the error but still navigate.
-      if (image) {
-        try {
-          const fd = new FormData();
-          fd.append("file", image);
-          await request<Listing>(`/api/listings/${listing.id}/image`, {
-            method: "POST",
-            body: fd,
-          });
-        } catch (e) {
-          setError(`Listing posted, but the image upload failed: ${String(e)}`);
-        }
+
+      // Upload the image. If this fails, the listing exists but will be
+      // hidden from the Everything Else browse (it filters out
+      // image_url IS NULL rows). User can retry from My Listings →
+      // Settings tab.
+      try {
+        const fd = new FormData();
+        fd.append("file", image);
+        await request<Listing>(`/api/listings/${listing.id}/image`, {
+          method: "POST",
+          body: fd,
+        });
+      } catch (e) {
+        setError(
+          `Listing posted, but the photo upload failed (${String(e)}). ` +
+            `You can re-upload from My listings → Settings.`,
+        );
       }
+
       nav(`/listings/${listing.id}`);
     } catch (e) {
-      setError(`Couldn't create listing: ${String(e)}`);
+      setError(`Couldn't create item: ${String(e)}`);
       setSubmitting(false);
     }
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 max-w-lg">
-      <h1 className="text-2xl font-semibold">Sell a book</h1>
+      <header>
+        <h1 className="text-2xl font-semibold">List an item</h1>
+        <p className="text-sm text-slate-600">
+          Posting to <span className="font-medium">Everything else</span> — not a textbook.
+          For books, use{" "}
+          <span className="font-medium">Sell a book</span> in the top nav instead.
+        </p>
+      </header>
 
-      <Field label="Course (optional)">
-        {coursesError && <p className="text-red-600 text-sm">{coursesError}</p>}
-        <CourseSearchPicker
-          courses={courses ?? []}
-          selectedId={courseId || null}
-          onChange={(id) => setCourseId(id ?? "")}
-          placeholder="Search for a course…"
-          allowEmpty
-          emptyLabel="— no course (general item) —"
-        />
+      <Field label="Category">
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as Exclude<ListingCategory, "book">)}
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          {NON_BOOK_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
       </Field>
 
-      <Field label="Book title">
+      <Field label="What is it?">
         <input
-          required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          maxLength={200}
-        />
-      </Field>
-
-      <Field label="Author">
-        <input
           required
-          value={author}
-          onChange={(e) => setAuthor(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           maxLength={200}
-        />
-      </Field>
-
-      <Field label="Edition (optional)">
-        <input
-          value={edition}
-          onChange={(e) => setEdition(e.target.value)}
+          placeholder="e.g. Standing desk, IKEA Bekant"
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          maxLength={40}
         />
       </Field>
 
       <Field label="Condition">
         <select
           value={condition}
-          onChange={(e) => setCondition(e.target.value as typeof CONDITIONS[number])}
+          onChange={(e) => setCondition(e.target.value as Condition)}
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm capitalize"
         >
           {CONDITIONS.map((c) => (
-            <option key={c} value={c} className="capitalize">{c.replace("_", " ")}</option>
+            <option key={c} value={c}>
+              {c.replace("_", " ")}
+            </option>
           ))}
         </select>
       </Field>
@@ -147,11 +144,12 @@ export default function NewListing() {
           onChange={(e) => setDescription(e.target.value)}
           maxLength={2000}
           rows={4}
+          placeholder="Dimensions, condition details, why you're selling…"
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </Field>
 
-      <Field label="Photo (optional)">
+      <Field label="Photo (required)">
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -175,7 +173,8 @@ export default function NewListing() {
         )}
         {imageError && <p className="text-red-600 text-xs mt-1">{imageError}</p>}
         <span className="block text-xs text-slate-500 mt-1">
-          JPEG, PNG, or WebP, up to 5 MB.
+          JPEG, PNG, or WebP, up to 5 MB. Listings without a photo are hidden from
+          Everything Else.
         </span>
       </Field>
 
@@ -183,7 +182,7 @@ export default function NewListing() {
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || !image}
         className="rounded-md bg-slate-900 px-4 py-2 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
       >
         {submitting ? "Posting…" : "Post listing"}

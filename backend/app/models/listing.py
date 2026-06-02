@@ -10,6 +10,17 @@ from app.db import Base
 
 CONDITIONS = ("new", "like_new", "good", "fair", "poor")
 STATUSES = ("active", "reserved", "sold", "withdrawn")
+CATEGORIES = (
+    "book",
+    "furniture",
+    "electronics",
+    "clothing",
+    "kitchen",
+    "decor",
+    "sports",
+    "transportation",
+    "other",
+)
 
 
 class Listing(Base):
@@ -23,9 +34,15 @@ class Listing(Base):
             "status IN ('active', 'reserved', 'sold', 'withdrawn')",
             name="ck_listing_status",
         ),
+        CheckConstraint(
+            "category IN ('book', 'furniture', 'electronics', 'clothing', "
+            "'kitchen', 'decor', 'sports', 'transportation', 'other')",
+            name="ck_listing_category",
+        ),
         CheckConstraint("price_cents >= 0", name="ck_listing_price_nonneg"),
         Index("ix_listings_course_status", "course_id", "status"),
         Index("ix_listings_seller_created", "seller_id", "created_at"),
+        Index("ix_listings_category_status", "category", "status"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -36,9 +53,16 @@ class Listing(Base):
         UUID(as_uuid=True), ForeignKey("courses.id", ondelete="RESTRICT"), nullable=True
     )
 
-    book_title: Mapped[str] = mapped_column(String(200), nullable=False)
-    book_author: Mapped[str] = mapped_column(String(200), nullable=False)
-    book_edition: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # 'book' vs 'furniture'/'electronics'/etc. Books additionally set
+    # author/edition/course_id; general items leave those nullable.
+    category: Mapped[str] = mapped_column(String(20), nullable=False, default="book")
+
+    # Used by all listings — book titles, item names, whatever.
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    # Book-specific. Nullable so non-book listings don't need to invent
+    # a value.
+    author: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    edition: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
     condition: Mapped[str] = mapped_column(String(20), nullable=False)
     price_cents: Mapped[int] = mapped_column(Integer, nullable=False)

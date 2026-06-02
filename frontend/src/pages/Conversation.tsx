@@ -38,7 +38,7 @@ export default function ConversationPage() {
         {otherParty ? `Chat with ${otherParty.display_name}` : "Conversation"}
       </h1>
       {conv?.listing && (
-        <p className="text-sm text-slate-600">About {conv.listing.book_title}</p>
+        <p className="text-sm text-slate-600">About {conv.listing.title}</p>
       )}
     </header>
   );
