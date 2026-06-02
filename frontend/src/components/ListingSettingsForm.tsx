@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiRequest, useApi } from "../lib/api";
 import type { Condition, Course, Listing, ListingStatus } from "../lib/types";
 import CourseSearchPicker from "./CourseSearchPicker";
@@ -14,6 +15,8 @@ type Props = {
 
 export default function ListingSettingsForm({ listing, onChange }: Props) {
   const { request } = useApi();
+  const nav = useNavigate();
+  const [deleting, setDeleting] = useState(false);
 
   const [title_, setTitle_] = useState(listing.title);
   const [author_, setAuthor_] = useState(listing.author ?? "");
@@ -108,14 +111,15 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
 
   return (
     <div className="space-y-6 max-w-lg">
-      {/* Status / take-down */}
+      {/* Status (active / reserved / sold). "Take down" is a separate
+          destructive action below — it hard-deletes the listing. */}
       <section>
         <h2 className="text-sm font-semibold mb-2">Status</h2>
         <p className="text-xs text-slate-500 mb-2">
           Current status: <span className="font-medium capitalize">{listing.status}</span>
         </p>
         <div className="flex flex-wrap gap-2">
-          {(["active", "reserved", "sold", "withdrawn"] as ListingStatus[]).map((s) => (
+          {(["active", "reserved", "sold"] as ListingStatus[]).map((s) => (
             <button
               key={s}
               type="button"
@@ -127,7 +131,7 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
                   : "border-slate-300 hover:bg-slate-50"
               }`}
             >
-              {s === "withdrawn" ? "Take down" : `Mark ${s}`}
+              Mark {s}
             </button>
           ))}
         </div>
@@ -257,6 +261,40 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
           {saving ? "Saving…" : "Save changes"}
         </button>
       </form>
+
+      <hr />
+
+      {/* Take down (destructive) — hard-deletes the listing, the photo,
+          and any conversations buyers have started about it. Separated
+          from the status grid because it's irreversible. */}
+      <section>
+        <h2 className="text-sm font-semibold mb-2">Take down</h2>
+        <p className="text-xs text-slate-500 mb-2">
+          Permanently deletes this listing, its photo, and any conversations buyers have
+          started about it. Can't be undone.
+        </p>
+        <button
+          type="button"
+          onClick={async () => {
+            const ok = window.confirm(
+              "Take down this listing? This deletes the photo and any buyer conversations about it. Can't be undone.",
+            );
+            if (!ok) return;
+            setDeleting(true);
+            try {
+              await request<void>(`/api/listings/${listing.id}`, { method: "DELETE" });
+              nav("/my-listings");
+            } catch (e) {
+              alert(`Couldn't take down the listing: ${String(e)}`);
+              setDeleting(false);
+            }
+          }}
+          disabled={deleting}
+          className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-red-700 text-xs font-medium hover:bg-red-50 disabled:opacity-50"
+        >
+          {deleting ? "Taking down…" : "Take down listing"}
+        </button>
+      </section>
     </div>
   );
 }
