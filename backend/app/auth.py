@@ -1,9 +1,9 @@
 """Clerk JWT verification.
 
 The frontend passes Clerk's session JWT as `Authorization: Bearer <token>`.
-We verify it against Clerk's JWKS (cached in-process), enforce the
-@student.uaustin.org email-domain restriction, and upsert the user into
-our `users` table on first sight.
+We verify it against Clerk's JWKS (cached in-process), optionally enforce
+an email-domain allowlist (off by default — see ALLOWED_EMAIL_DOMAINS in
+config.py), and upsert the user into our `users` table on first sight.
 
 In tests, `require_user` is overridden via FastAPI's dependency_overrides so
 we don't have to talk to Clerk's JWKS endpoint.

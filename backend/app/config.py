@@ -10,7 +10,12 @@ class Settings(BaseSettings):
     CLERK_ISSUER: str = ""
     CLERK_AUDIENCE: str = ""
 
-    ALLOWED_EMAIL_DOMAINS: str = "student.uaustin.org"
+    # Empty = open to any domain (the documented production policy — see
+    # CLAUDE.md). Override via the env var if you ever want to restrict;
+    # the .env.example shows the format. Previously defaulted to
+    # "student.uaustin.org", which silently locked prod out for accounts
+    # that hadn't been issued a school email yet — the opposite of intent.
+    ALLOWED_EMAIL_DOMAINS: str = ""
     APP_ENV: str = "dev"
 
     # Supabase Storage for listing photos. Leave empty to disable the
