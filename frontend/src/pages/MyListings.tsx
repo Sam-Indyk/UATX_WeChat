@@ -54,17 +54,17 @@ export default function MyListings() {
 
   return (
     <section className="space-y-4">
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">My listings</h1>
         <Link
           to={sellLink}
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-white text-sm font-medium hover:bg-slate-800"
+          className="rounded-md bg-amber-600 px-3 py-1.5 text-white text-sm font-medium hover:bg-amber-700"
         >
           {sellLabel}
         </Link>
       </header>
 
-      <nav className="border-b border-slate-200 flex gap-2 text-sm">
+      <nav className="border-b border-slate-200 flex gap-2 text-sm overflow-x-auto">
         <TabLink
           label={`Books (${books.length})`}
           active={tab === "books"}

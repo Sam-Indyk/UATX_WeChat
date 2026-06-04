@@ -99,7 +99,9 @@ export default function Classmates() {
 
       {classmates.length > 0 && (
         <div className="grid gap-4 md:grid-cols-[320px_1fr]">
-          <ul className="space-y-1 md:border-r md:border-slate-200 md:pr-3">
+          {/* Mobile: hide the list whenever a DM is open so the thread
+              fills the screen. Back button below restores it. */}
+          <ul className={`space-y-1 md:border-r md:border-slate-200 md:pr-3 ${activeDmId ? "hidden md:block" : ""}`}>
             {classmates.map((c) => {
               const isActive = c.dm_conversation_id !== null && c.dm_conversation_id === activeDmId;
               const isOpening = opening === c.id;
@@ -158,9 +160,22 @@ export default function Classmates() {
             })}
           </ul>
 
-          <div className="min-w-0">
+          <div className={`min-w-0 ${activeDmId ? "" : "hidden md:block"}`}>
             {activeDmId ? (
-              <ConversationThread conversationId={activeDmId} />
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = new URLSearchParams(params);
+                    next.delete("dm");
+                    setParams(next);
+                  }}
+                  className="md:hidden mb-3 inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
+                >
+                  ← Back to classmates
+                </button>
+                <ConversationThread conversationId={activeDmId} />
+              </>
             ) : (
               <p className="text-slate-500 text-sm">
                 Click a classmate on the left to start (or resume) a chat.

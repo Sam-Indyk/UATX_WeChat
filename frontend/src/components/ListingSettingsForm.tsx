@@ -153,13 +153,14 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            capture="environment"
             onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
             className="text-sm"
           />
           <button
             type="submit"
             disabled={!imageFile || imageUploading}
-            className="rounded-md bg-slate-900 px-3 py-1.5 text-white text-xs font-medium hover:bg-slate-800 disabled:opacity-50"
+            className="rounded-md bg-amber-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-amber-700 disabled:opacity-50"
           >
             {imageUploading ? "Uploading…" : "Upload"}
           </button>
@@ -256,7 +257,7 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-md bg-slate-900 px-4 py-2 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>

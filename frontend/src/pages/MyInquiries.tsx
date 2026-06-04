@@ -78,7 +78,9 @@ export default function MyInquiries() {
 
       {convos.length > 0 && (
         <div className="grid gap-4 md:grid-cols-[320px_1fr]">
-          <ul className="space-y-1 md:border-r md:border-slate-200 md:pr-3">
+          {/* Mobile: hide the list once a conversation is open so the
+              thread fills the screen. Back button restores it. */}
+          <ul className={`space-y-1 md:border-r md:border-slate-200 md:pr-3 ${activeConvoId ? "hidden md:block" : ""}`}>
             {convos.map((c) => {
               const isActive = c.id === activeConvoId;
               const unread = c.unread_count;
@@ -123,9 +125,18 @@ export default function MyInquiries() {
             })}
           </ul>
 
-          <div className="min-w-0">
+          <div className={`min-w-0 ${activeConvoId ? "" : "hidden md:block"}`}>
             {activeConvoId ? (
-              <ConversationThread conversationId={activeConvoId} />
+              <>
+                <button
+                  type="button"
+                  onClick={() => selectConvo(null)}
+                  className="md:hidden mb-3 inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
+                >
+                  ← Back to inquiries
+                </button>
+                <ConversationThread conversationId={activeConvoId} />
+              </>
             ) : (
               <p className="text-slate-500 text-sm">
                 Pick a conversation on the left to read it.

@@ -224,7 +224,7 @@ export default function MyClasses() {
       <button
         onClick={save}
         disabled={saving}
-        className="rounded-md bg-slate-900 px-4 py-2 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+        className="rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
       >
         {saving ? "Saving…" : "Save and continue"}
       </button>

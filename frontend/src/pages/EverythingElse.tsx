@@ -39,8 +39,8 @@ export default function EverythingElse() {
 
   return (
     <section className="space-y-4">
-      <header className="flex items-center justify-between gap-3">
-        <div>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold">Everything else</h1>
           <p className="text-sm text-slate-600">
             Non-book stuff between UATX students — furniture, electronics, clothing, bikes,
@@ -49,7 +49,7 @@ export default function EverythingElse() {
         </div>
         <Link
           to="/everything-else/new"
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-white text-sm font-medium hover:bg-slate-800"
+          className="rounded-md bg-amber-600 px-3 py-1.5 text-white text-sm font-medium hover:bg-amber-700 shrink-0"
         >
           + List something
         </Link>

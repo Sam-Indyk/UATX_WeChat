@@ -15,7 +15,7 @@ export default function Home() {
       <SignedOut>
         <Link
           to="/sign-in"
-          className="inline-block rounded-md bg-slate-900 px-4 py-2 text-white text-sm font-medium hover:bg-slate-800"
+          className="inline-block rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700"
         >
           Sign in with your UATX Google
         </Link>
@@ -24,7 +24,7 @@ export default function Home() {
         <div className="flex flex-wrap gap-3">
           <Link
             to="/match"
-            className="inline-block rounded-md bg-slate-900 px-4 py-2 text-white text-sm font-medium hover:bg-slate-800"
+            className="inline-block rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700"
           >
             See books for my courses
           </Link>
