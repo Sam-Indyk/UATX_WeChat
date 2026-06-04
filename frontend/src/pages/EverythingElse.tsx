@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiRequest } from "../lib/api";
+import { formatRelativeDate } from "../lib/date";
 import type { Listing, ListingCategory } from "../lib/types";
 import { NON_BOOK_CATEGORIES } from "../lib/types";
 
@@ -101,7 +102,7 @@ export default function EverythingElse() {
           <li key={l.id}>
             <Link
               to={`/listings/${l.id}`}
-              className="block overflow-hidden rounded-lg border border-slate-200 bg-white hover:border-slate-400"
+              className="block overflow-hidden rounded-lg border border-slate-200 bg-white transition-colors hover:border-slate-400 hover:shadow-sm"
             >
               {/* image is required for non-book listings, but we still
                   defend against null in case a listing was created
@@ -125,6 +126,9 @@ export default function EverythingElse() {
                   <span className="capitalize">{categoryLabel(l.category)}</span>
                   <span className="mx-1">·</span>
                   <span className="capitalize">{l.condition.replace("_", " ")}</span>
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Posted {formatRelativeDate(l.created_at)}
                 </p>
               </div>
             </Link>

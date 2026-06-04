@@ -24,6 +24,7 @@ def list_listings(
     course_id: uuid.UUID | None = Query(default=None),
     category: str | None = Query(default=None),
     status_: str = Query(default="active", alias="status"),
+    q: str | None = Query(default=None, max_length=200),
     db: Session = Depends(get_db),
 ) -> list[Listing]:
     """Browse listings.
@@ -35,6 +36,9 @@ def list_listings(
       simplest server semantics: if `category` is the literal string
       `non-book`, exclude books; otherwise filter to that exact value.
       Falls back to "all categories" when omitted (used by My Listings).
+    - `?q=<term>` → case-insensitive substring match on title OR author.
+      Used by the Books browse search box. Capped at 200 chars to keep
+      pathological queries out.
     """
     stmt = (
         select(Listing)
@@ -51,6 +55,16 @@ def list_listings(
         stmt = stmt.where(Listing.image_url.is_not(None))
     elif category is not None:
         stmt = stmt.where(Listing.category == category)
+    if q is not None and q.strip():
+        # Escape LIKE wildcards so a user typing "%" or "_" doesn't get
+        # a regex-like surprise. ILIKE is Postgres-specific; we're
+        # Postgres-only by design (see CLAUDE.md "no SQLite").
+        needle = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{needle}%"
+        stmt = stmt.where(
+            Listing.title.ilike(pattern, escape="\\")
+            | Listing.author.ilike(pattern, escape="\\")
+        )
     return list(db.execute(stmt).scalars().all())
 
 

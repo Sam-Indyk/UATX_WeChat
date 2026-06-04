@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useApi } from "../lib/api";
+import { formatRelativeDate } from "../lib/date";
 import type { MatchedListing } from "../lib/types";
 
 export default function Match() {
@@ -48,7 +49,7 @@ export default function Match() {
           <li key={l.id}>
             <Link
               to={`/listings/${l.id}`}
-              className="block rounded-lg border border-slate-200 bg-white p-4 hover:border-slate-400"
+              className="block rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-400 hover:shadow-sm"
             >
               <div className="flex justify-between gap-3">
                 <div>
@@ -61,6 +62,9 @@ export default function Match() {
                   <p className="text-xs text-slate-500 capitalize">{l.condition.replace("_", " ")}</p>
                 </div>
               </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Posted {formatRelativeDate(l.created_at)}
+              </p>
             </Link>
           </li>
         ))}
