@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import { apiRequest, useApi } from "../lib/api";
 import type { Conversation, Listing } from "../lib/types";
+import { PAYMENT_METHODS } from "../lib/types";
 
 export default function ListingDetail() {
   const { id } = useParams();
@@ -63,6 +64,19 @@ export default function ListingDetail() {
         <span>Condition: <span className="font-medium capitalize">{listing.condition.replace("_", " ")}</span></span>
         <span>Status: <span className="font-medium capitalize">{listing.status}</span></span>
       </div>
+
+      {/* Payment methods the seller said they accept. Order matches the
+          canonical order in PAYMENT_METHODS (cash → venmo → zelle → paypal
+          → stripe), regardless of how the seller saved them. Hidden when
+          empty — no "Accepts: nothing" line. */}
+      {listing.payment_methods.length > 0 && (
+        <p className="text-sm text-slate-600">
+          <span className="font-medium">Accepts:</span>{" "}
+          {PAYMENT_METHODS.filter((pm) => listing.payment_methods.includes(pm.value))
+            .map((pm) => pm.label)
+            .join(" · ")}
+        </p>
+      )}
 
       {listing.description && (
         <p className="text-slate-700 whitespace-pre-wrap">{listing.description}</p>

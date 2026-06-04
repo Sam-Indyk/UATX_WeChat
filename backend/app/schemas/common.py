@@ -78,6 +78,7 @@ ListingCategory = Literal[
     "transportation",
     "other",
 ]
+PaymentMethod = Literal["cash", "venmo", "zelle", "paypal", "stripe"]
 
 
 class ListingCreate(BaseModel):
@@ -91,6 +92,9 @@ class ListingCreate(BaseModel):
     condition: Condition
     price_cents: int = Field(ge=0)
     description: str = Field(default="", max_length=2000)
+    # Methods the seller is willing to accept. Empty list = unspecified
+    # (the UI hides the "Accepts:" line in that case).
+    payment_methods: list[PaymentMethod] = Field(default_factory=list)
 
 
 class ListingUpdate(BaseModel):
@@ -107,6 +111,9 @@ class ListingUpdate(BaseModel):
     course_id: uuid.UUID | None = None  # set to null to unlink from a course
     # Category changes are unusual but allowed (e.g., re-categorize an item).
     category: ListingCategory | None = None
+    # Send an empty list to clear all accepted methods; omit to leave
+    # them unchanged.
+    payment_methods: list[PaymentMethod] | None = None
 
 
 class ListingOut(BaseModel):
@@ -124,6 +131,7 @@ class ListingOut(BaseModel):
     description: str
     status: ListingStatus
     image_url: str | None = None
+    payment_methods: list[PaymentMethod] = Field(default_factory=list)
     created_at: datetime
     # Populated by GET /api/me/listings — count of incoming messages across
     # this listing's conversations the seller hasn't read. 0 elsewhere.

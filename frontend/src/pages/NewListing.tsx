@@ -2,7 +2,8 @@ import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest, useApi } from "../lib/api";
 import CourseSearchPicker from "../components/CourseSearchPicker";
-import type { Course, Listing } from "../lib/types";
+import type { Course, Listing, PaymentMethod } from "../lib/types";
+import { PAYMENT_METHODS } from "../lib/types";
 
 const CONDITIONS = ["new", "like_new", "good", "fair", "poor"] as const;
 
@@ -20,11 +21,18 @@ export default function NewListing() {
   const [condition, setCondition] = useState<typeof CONDITIONS[number]>("good");
   const [priceCents, setPriceCents] = useState(1500);
   const [description, setDescription] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [image, setImage] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function togglePaymentMethod(m: PaymentMethod) {
+    setPaymentMethods((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
+    );
+  }
 
   useEffect(() => {
     apiRequest<Course[]>("/api/courses").then(setCourses).catch((e) =>
@@ -48,6 +56,7 @@ export default function NewListing() {
           condition,
           price_cents: priceCents,
           description,
+          payment_methods: paymentMethods,
         },
       });
       // If the user picked an image, upload it now. Failure here is
@@ -149,6 +158,27 @@ export default function NewListing() {
           rows={4}
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
+      </Field>
+
+      <Field label="Payment methods accepted">
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {PAYMENT_METHODS.map((pm) => (
+            <label
+              key={pm.value}
+              className="inline-flex items-center gap-1.5 text-sm cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={paymentMethods.includes(pm.value)}
+                onChange={() => togglePaymentMethod(pm.value)}
+              />
+              {pm.label}
+            </label>
+          ))}
+        </div>
+        <span className="block text-xs text-slate-500 mt-1">
+          Optional. Pick any combination — buyers will see which methods you accept.
+        </span>
       </Field>
 
       <Field label="Photo (optional)">

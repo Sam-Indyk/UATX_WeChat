@@ -1,8 +1,8 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "../lib/api";
-import type { Condition, Listing, ListingCategory } from "../lib/types";
-import { NON_BOOK_CATEGORIES } from "../lib/types";
+import type { Condition, Listing, ListingCategory, PaymentMethod } from "../lib/types";
+import { NON_BOOK_CATEGORIES, PAYMENT_METHODS } from "../lib/types";
 
 const CONDITIONS: Condition[] = ["new", "like_new", "good", "fair", "poor"];
 
@@ -23,11 +23,18 @@ export default function NewItem() {
   const [condition, setCondition] = useState<Condition>("good");
   const [priceCents, setPriceCents] = useState(2000);
   const [description, setDescription] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [image, setImage] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function togglePaymentMethod(m: PaymentMethod) {
+    setPaymentMethods((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
+    );
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -48,6 +55,7 @@ export default function NewItem() {
           condition,
           price_cents: priceCents,
           description,
+          payment_methods: paymentMethods,
         },
       });
 
@@ -147,6 +155,27 @@ export default function NewItem() {
           placeholder="Dimensions, condition details, why you're selling…"
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
+      </Field>
+
+      <Field label="Payment methods accepted">
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {PAYMENT_METHODS.map((pm) => (
+            <label
+              key={pm.value}
+              className="inline-flex items-center gap-1.5 text-sm cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={paymentMethods.includes(pm.value)}
+                onChange={() => togglePaymentMethod(pm.value)}
+              />
+              {pm.label}
+            </label>
+          ))}
+        </div>
+        <span className="block text-xs text-slate-500 mt-1">
+          Optional. Pick any combination.
+        </span>
       </Field>
 
       <Field label="Photo (required)">
