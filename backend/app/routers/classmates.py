@@ -1,8 +1,16 @@
-"""Classmates lookup: people who share a current course with the signed-in user.
+"""Classmates lookup: people who share at least one of the signed-in user's
+CURRENT courses with the viewer, regardless of how THEY have it tagged
+(past / current / upcoming).
 
-Mirrors the cross-user enrollment query the matching algorithm uses,
-but returns *users* (grouped by id with their shared courses) instead
-of listings.
+The asymmetry is deliberate: 'my current courses' define the universe
+of courses the viewer cares about right now (their books to buy,
+classes they're in / about to take), and any classmate who has touched
+one of those courses is interesting — someone who took it in the past
+likely has the book to sell, someone currently in it is a real-time
+peer, someone upcoming is a future peer.
+
+Each shared course is returned annotated with the OTHER user's kind
+so the frontend can color-code (see SharedCourseOut).
 """
 from __future__ import annotations
 
@@ -15,7 +23,14 @@ from sqlalchemy.orm import Session
 from app.auth import require_user
 from app.db import get_db
 from app.models import Conversation, Course, Enrollment, Message, User
-from app.schemas.common import ClassmateOut, CourseOut
+from app.schemas.common import ClassmateOut, SharedCourseOut
+
+
+# Priority order for deduping: a classmate enrolled in the SAME course
+# both currently and in a past term (legitimate — retake / re-audit)
+# should show up once with the most-salient kind. Current beats past
+# beats upcoming for the same-class-as-me framing.
+_KIND_PRIORITY = {"current": 0, "past": 1, "upcoming": 2}
 
 
 router = APIRouter(prefix="/api", tags=["classmates"])
@@ -37,28 +52,37 @@ def list_classmates(
     if not my_course_ids:
         return []
 
+    # No kind filter on the OTHER user — past/current/upcoming all count.
+    # That's the whole point of this query: surface anyone who has ever
+    # touched a course the viewer cares about right now.
     rows = db.execute(
-        select(User, Course)
+        select(User, Course, Enrollment.kind)
         .join(Enrollment, Enrollment.user_id == User.id)
         .join(Course, Course.id == Enrollment.course_id)
         .where(
-            Enrollment.kind == "current",
             Enrollment.course_id.in_(my_course_ids),
             User.id != user.id,
         )
         .order_by(User.display_name, Course.code)
     ).all()
 
+    # Dedupe per (classmate, course) pair. A user may have enrolled in
+    # the same course across multiple terms (e.g. retake) so the join
+    # can produce multiple rows for the same Course; we collapse them
+    # by picking the highest-priority kind per course (see _KIND_PRIORITY).
     by_user: OrderedDict[str, dict] = OrderedDict()
-    for other, course in rows:
+    for other, course, kind in rows:
         entry = by_user.get(other.id)
         if entry is None:
-            entry = {"user": other, "courses": []}
+            entry = {"user": other, "courses": {}}
             by_user[other.id] = entry
-        entry["courses"].append(course)
+        existing = entry["courses"].get(course.id)
+        if existing is None or _KIND_PRIORITY[kind] < _KIND_PRIORITY[existing[1]]:
+            entry["courses"][course.id] = (course, kind)
 
     # Sort by overlap count descending (most classes-in-common at the top),
-    # then alphabetically by name as a stable tiebreaker.
+    # then alphabetically by name as a stable tiebreaker. The overlap
+    # count is the number of distinct shared courses (post-dedupe).
     sorted_entries = sorted(
         by_user.values(),
         key=lambda v: (-len(v["courses"]), v["user"].display_name.lower()),
@@ -116,7 +140,10 @@ def list_classmates(
             id=v["user"].id,
             display_name=v["user"].display_name,
             avatar_url=v["user"].avatar_url,
-            shared_courses=[CourseOut.model_validate(c) for c in v["courses"]],
+            shared_courses=[
+                SharedCourseOut(id=c.id, code=c.code, title=c.title, kind=k)
+                for c, k in v["courses"].values()
+            ],
             dm_conversation_id=dm_by_classmate.get(v["user"].id),
             unread_count=unread_by_classmate.get(v["user"].id, 0),
         )

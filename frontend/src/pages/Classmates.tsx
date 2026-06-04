@@ -3,9 +3,29 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useApi } from "../lib/api";
 import { useUnread } from "../hooks/useUnreadCount";
 import ConversationThread from "../components/ConversationThread";
-import type { Classmate, Conversation } from "../lib/types";
+import type { Classmate, Conversation, EnrollmentKind } from "../lib/types";
 
 const POLL_INTERVAL_MS = 15_000;
+
+/** Color codes for the OTHER user's enrollment kind on a shared course.
+ *  - current: emerald (active, "we share this right now")
+ *  - past:    slate   (neutral, "they took it — likely have the book")
+ *  - upcoming: sky    (future, "they will take it") */
+const KIND_STYLES: Record<EnrollmentKind, string> = {
+  current: "bg-emerald-100 text-emerald-800",
+  past: "bg-slate-100 text-slate-700",
+  upcoming: "bg-sky-100 text-sky-800",
+};
+
+function KindLabel({ kind }: { kind: EnrollmentKind }) {
+  return (
+    <span
+      className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${KIND_STYLES[kind]}`}
+    >
+      {kind}
+    </span>
+  );
+}
 
 /** Classmates page, post-IA-restructuring (PR #20).
  *
@@ -82,12 +102,18 @@ export default function Classmates() {
 
   return (
     <section className="space-y-4">
-      <header>
+      <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Classmates</h1>
         <p className="text-sm text-slate-600">
-          Other UATX students enrolled in your current courses, ranked by how many of your
-          classes you share. Click anyone to chat.
+          Students who took, are taking, or will take one of your current classes — ranked
+          by how many classes you share. Click anyone to chat.
         </p>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span>Color codes:</span>
+          <KindLabel kind="current" />
+          <KindLabel kind="past" />
+          <KindLabel kind="upcoming" />
+        </div>
       </header>
 
       {classmates.length === 0 && (
@@ -143,9 +169,15 @@ export default function Classmates() {
                         </p>
                         <ul className="mt-1 space-y-0.5">
                           {c.shared_courses.map((sc) => (
-                            <li key={sc.id} className="text-xs text-slate-700 truncate">
-                              {sc.title}
-                              <span className="text-slate-400 ml-1.5">{sc.code}</span>
+                            <li
+                              key={sc.id}
+                              className="flex items-center gap-1.5 text-xs"
+                            >
+                              <KindLabel kind={sc.kind} />
+                              <span className="text-slate-700 truncate flex-1 min-w-0">
+                                {sc.title}
+                              </span>
+                              <span className="text-slate-400 shrink-0">{sc.code}</span>
                             </li>
                           ))}
                         </ul>
