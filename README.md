@@ -5,7 +5,7 @@ A marketplace and chat app for UATX students to buy and sell used textbooks from
 - **Live URL:** https://uatxwechat-production.up.railway.app
 - **GitHub:** https://github.com/Sam-Indyk/UATX_WeChat
 - **Tier targeted:** Gold
-- **Status:** Bronze + Silver shipped. Gold mostly there — both custom features (image uploads, general marketplace) and the pick-one (real-time chat via polling) are live; mobile pass + visual design pass are the remaining gold-tier work. See [CLAUDE.md](CLAUDE.md) → Runway for the live to-do.
+- **Status:** All three tiers shipped. Both gold custom features (image uploads, general marketplace), the gold pick-one (real-time chat via polling), the silver second nontrivial piece (classmates lookup), and the mobile + visual passes are live. Optional silver e2e Playwright test is not done — spec frames it as "OR more tests" and we already have 115 backend + 2 frontend tests. See [CLAUDE.md](CLAUDE.md) → Runway for the full history.
 - **Onboarding a teammate?** Have them read [EITAN.md](EITAN.md).
 
 ## How to read this repo
@@ -66,11 +66,10 @@ npm run test
 
 | Person | Email | Focus |
 |---|---|---|
-| Sam Indyk | sindyk@student.uaustin.org | Repo owner. Built Bronze + Silver + Gold-tier backend / IA / chat / marketplace. |
-| Eitan | _TBD_ | Mobile pass + visual design pass (see [EITAN.md](EITAN.md)). |
-| _teammate 3 (optional)_ | _TBD_ | _TBD_ |
+| Sam Indyk | sindyk@student.uaustin.org | Repo owner. Built Bronze + Silver backend, the IA restructuring (per-context chat homes), real-time chat polling, image uploads, the general marketplace, and the deploy pipeline. |
+| Eitan Zarin | ezarin@student.uaustin.org | Course catalog seed + onboarding search (PR #4), classmates lookup foundation (PR #5), mobile pass + visual design pass (PR #28). |
 
-Commits from every teammate are required by the spec — coordinate so `git log` reflects real participation.
+Commits from both teammates are present in `git log` — required by the spec.
 
 ## Nontrivial logic
 
@@ -84,13 +83,15 @@ Commits from every teammate are required by the spec — coordinate so `git log`
 
 - **Optimistic message sends.** When you click Send, your message appears in the thread immediately with a dimmed bubble + "Sending…" caption. The POST then swaps the optimistic bubble for the server's confirmed message, or — if the request fails — removes the bubble and restores your typed text so you can fix-and-retry without re-typing. Lives in [`<ConversationThread>`](frontend/src/components/ConversationThread.tsx) and composes with the 4s polling: if a poll picks up the server-side version of your message between the optimistic-add and POST-resolve, the resolve handler dedupes.
 
-## Design decisions (initial)
+## Design decisions
 
 - **Clerk over Supabase Auth** — UATX students all have Google accounts; Clerk's Google-sign-in flow made this a 10-minute setup. We deliberately do NOT restrict to `@student.uaustin.org` — incoming students who don't have their school email yet need to be able to buy books from upperclassmen. Supabase still hosts our Postgres.
 - **Docker Postgres locally** — keeps local dev identical to prod (same Postgres version, same SQL features) without paying for a cloud dev DB.
 - **`users.id` is the Clerk user ID, not a generated UUID** — every JWT carries that ID as `sub`, so verification → DB lookup is a single primary-key fetch.
+- **Per-context chat homes, not a single inbox** — listing conversations live in `/my-listings` (as seller) or `/my-inquiries` (as buyer); DMs live in `/classmates`. The old single `/inbox` page was confusing — you couldn't tell at a glance what kind of conversation a row was about. Each chat type now has a semantic home, and the nav carries three per-context unread badges sourced from one batched `GET /api/me/unread-counts` query.
+- **Hard-delete on listing take-down, not soft-withdraw** — withdrawing a listing used to leave a zombie row + an orphaned Supabase Storage image. "Take down" now hard-deletes the listing (cascades to its conversations + messages via FK ON DELETE CASCADE) and best-effort deletes the photo. UI confirms first.
 
 ## Where coding agents helped, where we pushed back
 
-- **Helped:** scaffolding (FastAPI + SQLAlchemy + Alembic + Vite + Tailwind), boilerplate routers + Pydantic schemas, the matching ranking query, the per-context unread-count SQL (one query with three SUM(CASE) clauses), and the IA restructuring across PRs #17–#22 (per-context chat homes, optimistic sends, polling). Generally fast at "translate this design into idiomatic code in this stack."
-- **Pushed back:** initial passes leaned on suspicious shortcuts — mocking the DB in tests, an `X-Username` header for auth, SQLite for local dev. All explicitly forbidden in CLAUDE.md and reverted on review. Also caught a latent `conversations.updated_at` bug where assigning `msg.created_at` (None pre-commit) was a no-op — fix is to use `datetime.now(timezone.utc)` explicitly. A few times an agent invented imports or APIs that didn't exist; CI caught those.
+- **Helped:** scaffolding (FastAPI + SQLAlchemy + Alembic + Vite + Tailwind), boilerplate routers + Pydantic schemas, the matching ranking query, the per-context unread-count SQL (one query with three SUM(CASE) clauses), the IA restructuring across PRs #17–#22 (per-context chat homes, optimistic sends, polling), and the mobile collapse strategy for the two-pane chat layouts (PR #28). Generally fast at "translate this design into idiomatic code in this stack."
+- **Pushed back:** initial passes leaned on suspicious shortcuts — mocking the DB in tests, an `X-Username` header for auth, SQLite for local dev. All explicitly forbidden in CLAUDE.md and reverted on review. Also caught a latent `conversations.updated_at` bug where assigning `msg.created_at` (None pre-commit) was a no-op — fix is to use `datetime.now(timezone.utc)` explicitly. During the mobile polish PR the agent's `npm install` regenerated `package-lock.json` with cosmetic drift across npm versions; we reverted that to avoid churn in Sam's environment. A few times an agent invented imports or APIs that didn't exist; CI caught those.
