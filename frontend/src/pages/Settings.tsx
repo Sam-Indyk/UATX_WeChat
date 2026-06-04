@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useApi } from "../lib/api";
 import type { User } from "../lib/types";
 
@@ -235,6 +235,21 @@ export default function Settings() {
           {saving ? "Saving…" : "Save"}
         </button>
       </form>
+
+      <hr />
+
+      <section>
+        <h2 className="text-sm font-semibold mb-2">Feedback</h2>
+        <p className="text-xs text-slate-500 mb-3">
+          Got an idea, found a bug, or just want to send a note? We read everything.
+        </p>
+        <Link
+          to="/feedback"
+          className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Submit feedback →
+        </Link>
+      </section>
     </section>
   );
 }
