@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import { apiRequest, useApi } from "../lib/api";
 import type { Conversation, Listing } from "../lib/types";
 
@@ -8,6 +8,7 @@ export default function ListingDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const { request } = useApi();
+  const { user } = useUser();
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,16 +85,33 @@ export default function ListingDetail() {
         </figure>
       )}
 
-      <p className="text-sm text-slate-600">Seller: {listing.seller.display_name}</p>
+      <p className="text-sm text-slate-600">
+        Seller: {listing.seller.display_name}
+        {user?.id === listing.seller.id && (
+          <span className="ml-1 text-slate-500">(you)</span>
+        )}
+      </p>
 
       <SignedIn>
-        <button
-          onClick={contactSeller}
-          disabled={contacting || listing.status !== "active"}
-          className="rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
-        >
-          {contacting ? "Starting…" : "Message seller"}
-        </button>
+        {user?.id === listing.seller.id ? (
+          // Self-listing — backend rejects /contact with a 400, and
+          // the "Message seller" CTA reads as weird when you ARE the
+          // seller. Surface a path to the seller-side management view.
+          <Link
+            to={`/my-listings/${listing.id}`}
+            className="inline-block rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Manage in My listings →
+          </Link>
+        ) : (
+          <button
+            onClick={contactSeller}
+            disabled={contacting || listing.status !== "active"}
+            className="rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+          >
+            {contacting ? "Starting…" : "Message seller"}
+          </button>
+        )}
       </SignedIn>
       <SignedOut>
         <p className="text-sm text-slate-500">Sign in to message the seller.</p>
