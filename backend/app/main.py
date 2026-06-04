@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.routers import classmates, courses, listings, matching, me, messages, stripe_routes, users
+from app.routers import classmates, courses, feedback, listings, matching, me, messages, stripe_routes, users
 
 
 class SPAStaticFiles(StaticFiles):
@@ -65,6 +65,7 @@ app.include_router(matching.router)
 app.include_router(classmates.router)
 app.include_router(stripe_routes.router)
 app.include_router(users.router)
+app.include_router(feedback.router)
 
 
 # When deployed on Railway, FastAPI also serves the built React app at /.

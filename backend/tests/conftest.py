@@ -74,7 +74,7 @@ def db() -> Iterator[Session]:
     with _engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE messages, conversations, listings, enrollments, courses, users RESTART IDENTITY CASCADE"
+                "TRUNCATE feedback_submissions, messages, conversations, listings, enrollments, courses, users RESTART IDENTITY CASCADE"
             )
         )
     session = _TestSession()
