@@ -105,8 +105,8 @@ export default function Classmates() {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Classmates</h1>
         <p className="text-sm text-slate-600">
-          Students who took, are taking, or will take one of your current classes — ranked
-          by how many classes you share. Click anyone to chat.
+          Students who share any class with you — past, current, or upcoming —
+          ranked by how many you share. Click anyone to chat.
         </p>
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <span>Color codes:</span>

@@ -2,13 +2,13 @@
 
 Covers:
   - auth required (401 for anon)
-  - empty when the signed-in user has no current enrollments
-  - my-side stays on kind='current' (past/upcoming enrollments on MY
-    side don't widen the pool — only courses I care about right now)
+  - empty when the signed-in user has no enrollments at all
+  - my-side spans past + current + upcoming (any enrollment kind on
+    MY side counts toward the classmate pool)
   - the signed-in user is never included in their own classmates list
   - shared courses are grouped per user and limited to the overlap
-  - other-side spans past + current + upcoming, with the OTHER user's
-    kind returned per shared course so the UI can color-code
+  - other-side also spans past + current + upcoming, with the OTHER
+    user's kind returned per shared course so the UI can color-code
   - dedupe: a classmate enrolled in the same course across multiple
     terms appears once with the highest-priority kind
 """
@@ -61,7 +61,7 @@ def test_classmates_requires_auth(anon_client) -> None:
     assert r.status_code == 401
 
 
-def test_no_current_enrollments_returns_empty(client) -> None:
+def test_no_enrollments_returns_empty(client) -> None:
     r = client.get("/api/classmates")
     assert r.status_code == 200
     assert r.json() == []
@@ -108,19 +108,26 @@ def test_past_and_upcoming_classmates_appear_with_their_kind(
     assert by_id[soon.id]["shared_courses"][0]["kind"] == "upcoming"
 
 
-def test_my_side_anchored_to_current(client, phil, db, make_user) -> None:
-    """If I only have PHIL 101 as past, no one shows up even if there
-    are people currently in PHIL 101 — the query is anchored to MY
-    current courses."""
+def test_my_side_spans_all_kinds(client, phil, math, db, make_user) -> None:
+    """Past and upcoming enrollments on MY side also count. If I took
+    PHIL last year and someone is taking it now, we're classmates. If
+    I'm registered for MATH next semester and someone took it last
+    year, also classmates."""
     me = client.current_user
     _enroll(db, user_id=me.id, course_id=phil.id, term="Fall 2024", kind="past")
+    _enroll(db, user_id=me.id, course_id=math.id, term="Fall 2026", kind="upcoming")
 
-    other = make_user(display_name="CurrentInPhil")
-    _enroll(db, user_id=other.id, course_id=phil.id, term="Spring 2026", kind="current")
+    a = make_user(display_name="CurrentInPhil")
+    _enroll(db, user_id=a.id, course_id=phil.id, term="Spring 2026", kind="current")
 
-    r = client.get("/api/classmates")
-    assert r.status_code == 200
-    assert r.json() == []
+    b = make_user(display_name="TookMathLastYear")
+    _enroll(db, user_id=b.id, course_id=math.id, term="Fall 2024", kind="past")
+
+    rows = client.get("/api/classmates").json()
+    by_id = {r["id"]: r for r in rows}
+    assert set(by_id) == {a.id, b.id}
+    assert by_id[a.id]["shared_courses"][0]["code"] == "PHIL 101"
+    assert by_id[b.id]["shared_courses"][0]["code"] == "MATH 201"
 
 
 def test_dedupe_retake_collapses_to_highest_priority_kind(
