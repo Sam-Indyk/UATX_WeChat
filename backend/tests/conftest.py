@@ -29,6 +29,7 @@ from app.auth import require_user  # noqa: E402
 from app.db import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import User  # noqa: E402
+from app.rate_limit import reset_for_tests as _reset_rate_limit  # noqa: E402
 
 
 _engine = create_engine(os.environ["DATABASE_URL"], future=True)
@@ -69,7 +70,9 @@ def _init_db() -> None:
 def db() -> Iterator[Session]:
     """Per-test session that wipes table data before yielding.
 
-    We TRUNCATE rather than drop+recreate to keep tests fast.
+    We TRUNCATE rather than drop+recreate to keep tests fast. Also
+    resets the in-memory message rate-limit counter so one test's
+    sends don't poison the next.
     """
     with _engine.begin() as conn:
         conn.execute(
@@ -77,6 +80,7 @@ def db() -> Iterator[Session]:
                 "TRUNCATE feedback_submissions, messages, conversations, listings, enrollments, courses, users RESTART IDENTITY CASCADE"
             )
         )
+    _reset_rate_limit()
     session = _TestSession()
     try:
         yield session

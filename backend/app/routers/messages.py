@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from app.auth import require_user
 from app.db import get_db
 from app.models import Conversation, Listing, Message, User
+from app.rate_limit import check_message_rate
 from app.schemas.common import ConversationOut, MarkReadOut, MessageIn, MessageOut
 
 
@@ -176,6 +177,17 @@ def send_message(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> Message:
+    # Rate-limit before any DB work so a flooding user pays minimal cost.
+    # See app/rate_limit.py for the policy (30 messages / 60 seconds per
+    # user). Auth check is implicit via Depends(require_user).
+    allowed, retry_after = check_message_rate(user.id)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"You're sending messages too fast. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     conv = db.execute(
         select(Conversation)
         .options(joinedload(Conversation.listing))
