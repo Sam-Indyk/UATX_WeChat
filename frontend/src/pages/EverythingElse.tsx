@@ -119,7 +119,7 @@ export default function EverythingElse() {
               )}
               <div className="p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium truncate">{l.title}</p>
+                  <p className="font-medium truncate min-w-0 flex-1">{l.title}</p>
                   <p className="font-semibold shrink-0">${(l.price_cents / 100).toFixed(2)}</p>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">

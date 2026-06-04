@@ -52,10 +52,10 @@ export default function Match() {
               className="block rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-400 hover:shadow-sm"
             >
               <div className="flex justify-between gap-3">
-                <div>
-                  <p className="font-medium">{l.title}</p>
-                  <p className="text-sm text-slate-600">{l.author}</p>
-                  <p className="text-xs text-slate-500 mt-1 italic">{l.rationale}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{l.title}</p>
+                  <p className="text-sm text-slate-600 truncate">{l.author}</p>
+                  <p className="text-xs text-slate-500 mt-1 italic break-words">{l.rationale}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="font-semibold">${(l.price_cents / 100).toFixed(2)}</p>
