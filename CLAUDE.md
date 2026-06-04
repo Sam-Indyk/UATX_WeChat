@@ -138,6 +138,34 @@ npm run test
 - Backend verifies the JWT against Clerk's JWKS. On success it extracts the Clerk user ID (`sub`) and uses that as `users.id`.
 - First request from a new Clerk user upserts the `users` row (display name, email, avatar URL from JWT claims).
 
+## Stripe: how Connect fits
+
+Sellers can connect a Stripe Connect Express account from `/settings`. Buyers see a "Pay with Stripe" button on any listing where the seller has both Stripe in `payment_methods` AND has finished onboarding. Clicking it creates a [Stripe Checkout Session](https://stripe.com/docs/api/checkout/sessions) on the seller's connected account (destination charge) and redirects the buyer to Stripe's hosted page. When the buyer pays, Stripe POSTs `checkout.session.completed` to `/api/stripe/webhook` and we flip the listing to `reserved`. The seller still manually marks it `sold` once handoff is done.
+
+**Test mode is fine for the demo** — no real money. Use card `4242 4242 4242 4242` with any future expiry and any CVC.
+
+**Required env vars** (in `backend/.env`):
+- `STRIPE_SECRET_KEY` — `sk_test_...` from the Stripe dashboard. All endpoints return 503 without it.
+- `STRIPE_WEBHOOK_SECRET` — `whsec_...`. In prod, comes from creating an endpoint in the Stripe dashboard. Locally, see below.
+- `STRIPE_RETURN_URL_BASE` — defaults to `http://localhost:5173`. Set to the Railway URL in prod.
+- `STRIPE_PLATFORM_FEE_BPS` — basis points the platform skims (1 bps = 0.01%). Demo uses 0.
+
+**Local dev — webhooks via Stripe CLI:**
+```bash
+brew install stripe/stripe-cli/stripe   # or download from stripe.com/docs/stripe-cli
+stripe login                            # auth to your Stripe account
+stripe listen --forward-to localhost:8000/api/stripe/webhook
+# Copy the printed `whsec_...` into backend/.env as STRIPE_WEBHOOK_SECRET, then restart uvicorn.
+```
+
+You can also trigger fake events without paying anything:
+```bash
+stripe trigger checkout.session.completed
+stripe trigger account.updated
+```
+
+**Why Checkout-redirect over embedded Elements:** Stripe hosts the entire payment UI, so we never touch raw card numbers and the PCI scope stays at zero. The redirect adds one extra navigation but is dramatically less code (no Elements provider, no PaymentIntent client secrets, no card-field state machine). Trade-off was acceptable for the demo.
+
 ## The nontrivial pieces
 
 ### Piece 1 (bronze): course-matching algorithm

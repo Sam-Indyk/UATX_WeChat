@@ -12,6 +12,10 @@ class UserOut(BaseModel):
     email: str
     display_name: str
     avatar_url: str | None = None
+    # True once the user has finished Stripe Connect onboarding (their
+    # account can charge). Drives whether the "Pay with Stripe" button
+    # shows on this user's listings. Not sensitive — it's just a flag.
+    stripe_onboarded: bool = False
 
 
 class MeUpdate(BaseModel):

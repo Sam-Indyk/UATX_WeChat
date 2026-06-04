@@ -1,9 +1,16 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useApi } from "../lib/api";
 import type { User } from "../lib/types";
 
 export default function Settings() {
   const { request } = useApi();
+  const [params] = useSearchParams();
+  // Set when the user just came back from Stripe-hosted onboarding. The
+  // server-side flag flips via webhook (account.updated), which arrives
+  // independently, so we just nudge users to refresh if they don't see
+  // the connected pill yet.
+  const justReturnedFromStripe = params.get("stripe") === "return";
 
   const [me, setMe] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -16,6 +23,28 @@ export default function Settings() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  // Stripe Connect state.
+  const [stripeStarting, setStripeStarting] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+
+  async function startStripeOnboarding() {
+    setStripeStarting(true);
+    setStripeError(null);
+    try {
+      const { onboarding_url } = await request<{ onboarding_url: string }>(
+        "/api/me/stripe/onboard",
+        { method: "POST" },
+      );
+      // Redirect to the Stripe-hosted form. They'll come back to
+      // /settings?stripe=return when done (or ?stripe=refresh if the
+      // link expired mid-flow).
+      window.location.href = onboarding_url;
+    } catch (e) {
+      setStripeError(`Couldn't start Stripe onboarding: ${String(e)}`);
+      setStripeStarting(false);
+    }
+  }
 
   useEffect(() => {
     request<User>("/api/me")
@@ -121,6 +150,43 @@ export default function Settings() {
             <p className="text-xs text-slate-500">JPEG, PNG, or WebP, up to 5 MB.</p>
           </form>
         </div>
+      </section>
+
+      <hr />
+
+      {/* Stripe payments */}
+      <section>
+        <h2 className="text-sm font-semibold mb-2">Stripe payments</h2>
+        <p className="text-xs text-slate-500 mb-3">
+          Connect a Stripe account to accept card payments on your listings.
+          Buyers will see a "Pay with Stripe" button on any listing where you've
+          checked Stripe in the payment methods.
+        </p>
+        {me.stripe_onboarded ? (
+          <div className="flex items-center gap-2 text-sm text-emerald-700">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+            Connected. You can accept Stripe payments.
+          </div>
+        ) : (
+          <>
+            {justReturnedFromStripe && (
+              <p className="mb-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                Welcome back from Stripe. It can take a moment for the
+                connection to register — refresh this page in a few seconds
+                to see the green "Connected" pill.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={startStripeOnboarding}
+              disabled={stripeStarting}
+              className="rounded-md bg-amber-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-amber-700 disabled:opacity-50"
+            >
+              {stripeStarting ? "Redirecting…" : "Connect with Stripe"}
+            </button>
+            {stripeError && <p className="mt-2 text-red-600 text-xs">{stripeError}</p>}
+          </>
+        )}
       </section>
 
       <hr />

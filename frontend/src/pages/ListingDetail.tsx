@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import { apiRequest, useApi } from "../lib/api";
 import type { Conversation, Listing } from "../lib/types";
@@ -10,10 +10,16 @@ export default function ListingDetail() {
   const nav = useNavigate();
   const { request } = useApi();
   const { user } = useUser();
+  const [params] = useSearchParams();
+  // Set by Stripe when redirecting the buyer back from the hosted
+  // checkout page. The listing's actual status change happens server-
+  // side via webhook, so this is just for the UI banner.
+  const stripeResult = params.get("stripe");
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [contacting, setContacting] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -35,11 +41,51 @@ export default function ListingDetail() {
     }
   }
 
+  async function payWithStripe() {
+    if (!id) return;
+    setPaying(true);
+    setError(null);
+    try {
+      const { url } = await request<{ url: string }>(
+        `/api/listings/${id}/checkout`,
+        { method: "POST" },
+      );
+      // Hard redirect — Stripe's hosted checkout takes over, then sends
+      // the buyer back to /listings/:id?stripe=success or ?stripe=cancel.
+      window.location.href = url;
+    } catch (e) {
+      setError(`Couldn't start checkout: ${String(e)}`);
+      setPaying(false);
+    }
+  }
+
   if (error) return <p className="text-red-600">{error}</p>;
   if (!listing) return <p className="text-slate-500">Loading…</p>;
 
+  const isOwn = user?.id === listing.seller.id;
+  const sellerAcceptsStripe = listing.payment_methods.includes("stripe");
+  const sellerReadyForStripe = listing.seller.stripe_onboarded;
+  const canPayWithStripe =
+    !isOwn &&
+    listing.status === "active" &&
+    sellerAcceptsStripe &&
+    sellerReadyForStripe;
+
   return (
     <article className="space-y-4">
+      {stripeResult === "success" && (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          ✓ Payment received. The seller will be notified and the listing
+          is now reserved — message them to arrange pickup.
+        </div>
+      )}
+      {stripeResult === "cancel" && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          Payment canceled. You can try again, or message the seller to
+          arrange a different payment method.
+        </div>
+      )}
+
       <header>
         <h1 className="text-2xl font-semibold">{listing.title}</h1>
         {listing.category === "book" ? (
@@ -107,7 +153,7 @@ export default function ListingDetail() {
       </p>
 
       <SignedIn>
-        {user?.id === listing.seller.id ? (
+        {isOwn ? (
           // Self-listing — backend rejects /contact with a 400, and
           // the "Message seller" CTA reads as weird when you ARE the
           // seller. Surface a path to the seller-side management view.
@@ -118,13 +164,29 @@ export default function ListingDetail() {
             Manage in My listings →
           </Link>
         ) : (
-          <button
-            onClick={contactSeller}
-            disabled={contacting || listing.status !== "active"}
-            className="rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
-          >
-            {contacting ? "Starting…" : "Message seller"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {canPayWithStripe && (
+              <button
+                onClick={payWithStripe}
+                disabled={paying}
+                className="rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+              >
+                {paying ? "Starting Stripe…" : "Pay with Stripe"}
+              </button>
+            )}
+            <button
+              onClick={contactSeller}
+              disabled={contacting || listing.status !== "active"}
+              className={
+                canPayWithStripe
+                  ? // Secondary when Pay with Stripe is the primary
+                    "rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  : "rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+              }
+            >
+              {contacting ? "Starting…" : "Message seller"}
+            </button>
+          </div>
         )}
       </SignedIn>
       <SignedOut>
