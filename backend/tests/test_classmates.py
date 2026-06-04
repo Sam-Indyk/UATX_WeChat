@@ -3,9 +3,14 @@
 Covers:
   - auth required (401 for anon)
   - empty when the signed-in user has no current enrollments
-  - non-current enrollments don't count (only is_kind="current")
+  - my-side stays on kind='current' (past/upcoming enrollments on MY
+    side don't widen the pool — only courses I care about right now)
   - the signed-in user is never included in their own classmates list
   - shared courses are grouped per user and limited to the overlap
+  - other-side spans past + current + upcoming, with the OTHER user's
+    kind returned per shared course so the UI can color-code
+  - dedupe: a classmate enrolled in the same course across multiple
+    terms appears once with the highest-priority kind
 """
 import uuid
 
@@ -80,16 +85,60 @@ def test_groups_shared_courses_per_classmate(client, phil, math, db, make_user) 
     assert {c["code"] for c in by_id[bob.id]["shared_courses"]} == {"PHIL 101"}
 
 
-def test_ignores_non_current_enrollments(client, phil, db, make_user) -> None:
+def test_past_and_upcoming_classmates_appear_with_their_kind(
+    client, phil, db, make_user
+) -> None:
+    """The other side spans past + current + upcoming. Each shared
+    course chip carries the OTHER user's kind so the UI can color-code."""
     me = client.current_user
     _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
 
-    past_classmate = make_user(email="alum@student.uaustin.org")
-    _enroll(db, user_id=past_classmate.id, course_id=phil.id, term="Fall 2024", kind="past")
+    past = make_user(email="past@student.uaustin.org", display_name="PastAlum")
+    now = make_user(email="now@student.uaustin.org", display_name="CurrentPeer")
+    soon = make_user(email="soon@student.uaustin.org", display_name="UpcomingPeer")
+    _enroll(db, user_id=past.id, course_id=phil.id, term="Fall 2024", kind="past")
+    _enroll(db, user_id=now.id, course_id=phil.id, term="Spring 2026", kind="current")
+    _enroll(db, user_id=soon.id, course_id=phil.id, term="Fall 2026", kind="upcoming")
+
+    rows = client.get("/api/classmates").json()
+    by_id = {r["id"]: r for r in rows}
+    assert set(by_id) == {past.id, now.id, soon.id}
+    assert by_id[past.id]["shared_courses"][0]["kind"] == "past"
+    assert by_id[now.id]["shared_courses"][0]["kind"] == "current"
+    assert by_id[soon.id]["shared_courses"][0]["kind"] == "upcoming"
+
+
+def test_my_side_anchored_to_current(client, phil, db, make_user) -> None:
+    """If I only have PHIL 101 as past, no one shows up even if there
+    are people currently in PHIL 101 — the query is anchored to MY
+    current courses."""
+    me = client.current_user
+    _enroll(db, user_id=me.id, course_id=phil.id, term="Fall 2024", kind="past")
+
+    other = make_user(display_name="CurrentInPhil")
+    _enroll(db, user_id=other.id, course_id=phil.id, term="Spring 2026", kind="current")
 
     r = client.get("/api/classmates")
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_dedupe_retake_collapses_to_highest_priority_kind(
+    client, phil, db, make_user
+) -> None:
+    """A classmate enrolled in the same course across multiple terms
+    (retake) appears once. Priority: current > past > upcoming."""
+    me = client.current_user
+    _enroll(db, user_id=me.id, course_id=phil.id, term="Spring 2026")
+
+    retaker = make_user(display_name="Retaker")
+    _enroll(db, user_id=retaker.id, course_id=phil.id, term="Fall 2024", kind="past")
+    _enroll(db, user_id=retaker.id, course_id=phil.id, term="Spring 2026", kind="current")
+
+    rows = client.get("/api/classmates").json()
+    assert len(rows) == 1
+    assert len(rows[0]["shared_courses"]) == 1  # deduped
+    assert rows[0]["shared_courses"][0]["kind"] == "current"  # current beats past
 
 
 def test_excludes_self_even_with_duplicate_enrollments(client, phil, db) -> None:

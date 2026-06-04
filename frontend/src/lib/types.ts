@@ -90,11 +90,16 @@ export type Conversation = {
   unread_count: number;
 };
 
+/** A course shared with a classmate, annotated with the OTHER user's
+ *  enrollment kind for that course. The viewer's own kind is always
+ *  "current" — those are the courses the classmates query is scoped to. */
+export type SharedCourse = Course & { kind: EnrollmentKind };
+
 export type Classmate = {
   id: string;
   display_name: string;
   avatar_url: string | null;
-  shared_courses: Course[];
+  shared_courses: SharedCourse[];
   // Null = no DM has been started with this classmate yet (clicking on
   // the row will create one). Set = the existing DM's id.
   dm_conversation_id: string | null;

@@ -166,11 +166,22 @@ class ConversationOut(BaseModel):
     unread_count: int = 0
 
 
+class SharedCourseOut(CourseOut):
+    """A course shared with a classmate, annotated with the OTHER user's
+    enrollment kind for that course (past / current / upcoming). Lets
+    the frontend color-code each chip so viewers can tell at a glance
+    whether a classmate took the class, is taking it now, or will take
+    it. The viewer's own kind for the course is always 'current' — those
+    are the courses the classmates query is scoped to."""
+
+    kind: EnrollmentKind
+
+
 class ClassmateOut(BaseModel):
     id: str
     display_name: str
     avatar_url: str | None = None
-    shared_courses: list[CourseOut]
+    shared_courses: list[SharedCourseOut]
     # Populated by GET /api/classmates so the Classmates page can render
     # an inline DM thread without an extra round-trip. null = no DM has
     # been started with this classmate yet (clicking creates one).
