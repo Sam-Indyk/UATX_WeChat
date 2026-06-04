@@ -16,6 +16,7 @@ import MyInquiries from "./pages/MyInquiries";
 import EverythingElse from "./pages/EverythingElse";
 import NewItem from "./pages/NewItem";
 import UserProfile from "./pages/UserProfile";
+import Logo from "./components/Logo";
 import { useUnread } from "./hooks/useUnreadCount";
 
 export default function App() {
@@ -70,7 +71,10 @@ function Nav() {
   return (
     <nav className="border-b border-slate-200 bg-white">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-6">
-        <Link to="/" className="font-semibold tracking-tight">UATX_WeChat</Link>
+        <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          <Logo size={28} className="text-amber-600 shrink-0" />
+          <span>UATX_WeChat</span>
+        </Link>
 
         {/* Desktop links — hidden below md. whitespace-nowrap keeps multi-
             word labels on one line; without it flex shrinking would wrap

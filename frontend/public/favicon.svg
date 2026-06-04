@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="UATX">
+  <text
+    x="32" y="26"
+    font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="22" font-weight="800"
+    text-anchor="middle" fill="#d97706"
+    textLength="56" lengthAdjust="spacingAndGlyphs"
+  >UATX</text>
+  <path
+    d="M 4 34 L 20 58 L 32 44 L 44 58 L 60 34"
+    fill="none" stroke="#d97706" stroke-width="6"
+    stroke-linecap="round" stroke-linejoin="round"
+  />
+</svg>
