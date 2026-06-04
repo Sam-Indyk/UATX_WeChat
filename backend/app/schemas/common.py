@@ -85,6 +85,13 @@ ListingCategory = Literal[
 PaymentMethod = Literal["cash", "venmo", "zelle", "paypal", "stripe"]
 
 
+# $100,000 cap on listing price, in cents. Far above any realistic
+# student-to-student transaction, but well below Postgres's INT4 max
+# (~$21.4M-equivalent) so a typo like "1111111111" surfaces as a clean
+# Pydantic 422 instead of a DB integer-out-of-range 500.
+MAX_PRICE_CENTS = 100_000_00  # 10,000,000 cents = $100,000
+
+
 class ListingCreate(BaseModel):
     # 'book' (default for the Sell-a-book form) or one of the Everything
     # Else categories. Determines which other fields are required.
@@ -94,7 +101,7 @@ class ListingCreate(BaseModel):
     author: str | None = Field(default=None, max_length=200)
     edition: str | None = Field(default=None, max_length=40)
     condition: Condition
-    price_cents: int = Field(ge=0)
+    price_cents: int = Field(ge=0, le=MAX_PRICE_CENTS)
     description: str = Field(default="", max_length=2000)
     # Methods the seller is willing to accept. Empty list = unspecified
     # (the UI hides the "Accepts:" line in that case).
@@ -106,7 +113,7 @@ class ListingUpdate(BaseModel):
     # the ones that changed. Status can transition active → reserved →
     # sold → withdrawn ("Take down" sets status='withdrawn').
     status: ListingStatus | None = None
-    price_cents: int | None = Field(default=None, ge=0)
+    price_cents: int | None = Field(default=None, ge=0, le=MAX_PRICE_CENTS)
     description: str | None = Field(default=None, max_length=2000)
     title: str | None = Field(default=None, min_length=1, max_length=200)
     author: str | None = Field(default=None, max_length=200)
