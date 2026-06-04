@@ -1,16 +1,12 @@
-"""Classmates lookup: people who share at least one of the signed-in user's
-CURRENT courses with the viewer, regardless of how THEY have it tagged
-(past / current / upcoming).
+"""Classmates lookup: people who share at least one of the signed-in
+user's courses, across all enrollment kinds (past / current / upcoming)
+on BOTH sides.
 
-The asymmetry is deliberate: 'my current courses' define the universe
-of courses the viewer cares about right now (their books to buy,
-classes they're in / about to take), and any classmate who has touched
-one of those courses is interesting — someone who took it in the past
-likely has the book to sell, someone currently in it is a real-time
-peer, someone upcoming is a future peer.
-
-Each shared course is returned annotated with the OTHER user's kind
-so the frontend can color-code (see SharedCourseOut).
+The query is symmetric — anyone the viewer has ever overlapped with on
+any course (whether the viewer took it past, takes it now, or will take
+it upcoming) counts as a classmate. Each shared course is returned
+annotated with the OTHER user's kind so the frontend can color-code
+(see SharedCourseOut).
 """
 from __future__ import annotations
 
@@ -41,20 +37,21 @@ def list_classmates(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> list[ClassmateOut]:
+    # All of the viewer's enrollments count — past / current / upcoming.
+    # Distinct because the viewer might have the same course across
+    # multiple terms (retake); we just need the set of course IDs.
     my_course_ids = list(
         db.execute(
-            select(Enrollment.course_id).where(
-                Enrollment.user_id == user.id,
-                Enrollment.kind == "current",
-            )
+            select(Enrollment.course_id)
+            .where(Enrollment.user_id == user.id)
+            .distinct()
         ).scalars()
     )
     if not my_course_ids:
         return []
 
-    # No kind filter on the OTHER user — past/current/upcoming all count.
-    # That's the whole point of this query: surface anyone who has ever
-    # touched a course the viewer cares about right now.
+    # No kind filter on the OTHER user either — anyone enrolled in one
+    # of the viewer's courses (in any kind, in any term) is a classmate.
     rows = db.execute(
         select(User, Course, Enrollment.kind)
         .join(Enrollment, Enrollment.user_id == User.id)
