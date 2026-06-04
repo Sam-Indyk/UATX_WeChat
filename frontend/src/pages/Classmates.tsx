@@ -109,7 +109,7 @@ export default function Classmates() {
           ranked by how many you share. Click anyone to chat.
         </p>
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <span>Color codes:</span>
+          <span>Their enrollment:</span>
           <KindLabel kind="current" />
           <KindLabel kind="past" />
           <KindLabel kind="upcoming" />
