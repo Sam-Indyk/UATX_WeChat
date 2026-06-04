@@ -17,6 +17,24 @@ type Props = {
  *  stays a pure server-shape representation. */
 type LocalMessage = Message & { _pending?: boolean };
 
+/** Display a message timestamp. Same-day messages show just the time
+ *  ("3:42 PM"); older messages add the date ("Jun 4, 3:42 PM"). Skips
+ *  the year — chat messages rarely matter beyond a few months back. */
+function formatMessageTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) {
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+  return d.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 /** How often we poll for new messages while the thread is open. The
  *  silver "real-time-ish" requirement is <=5s end-to-end; polling every
  *  4s keeps us safely under that even with a slow round-trip. */
@@ -201,9 +219,13 @@ export default function ConversationThread({ conversationId, header }: Props) {
               >
                 {m.body}
               </div>
-              {m._pending && (
-                <span className="text-[10px] text-slate-400 italic mt-0.5">Sending…</span>
-              )}
+              <span
+                className={`text-[10px] text-slate-400 mt-0.5 ${
+                  m._pending ? "italic" : ""
+                }`}
+              >
+                {m._pending ? "Sending…" : formatMessageTime(m.created_at)}
+              </span>
             </li>
           );
         })}
