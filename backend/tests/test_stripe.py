@@ -46,6 +46,17 @@ def stripe_env(monkeypatch) -> None:
 
 
 @pytest.fixture()
+def stripe_unconfigured(monkeypatch) -> None:
+    """Force Stripe to look unconfigured. Without this, devs who have set
+    STRIPE_SECRET_KEY in their local .env (perfectly normal once you're
+    set up for end-to-end local testing) would see the 503-branch tests
+    fail because pydantic-settings loads .env on Settings() instantiation.
+    CI doesn't have a .env, so the bug went unnoticed there."""
+    monkeypatch.setattr(settings, "STRIPE_SECRET_KEY", "")
+    monkeypatch.setattr(settings, "STRIPE_WEBHOOK_SECRET", "")
+
+
+@pytest.fixture()
 def stripe_sdk(monkeypatch, stripe_env) -> dict:
     """Patch the Stripe SDK methods our router calls. Returns a dict of
     captured call kwargs so individual tests can assert on the inputs.
@@ -141,14 +152,15 @@ def _make_listing(
 # --------------- 503 when not configured ---------------
 
 
-def test_onboard_returns_503_when_stripe_not_configured(client) -> None:
-    # No stripe_env fixture — STRIPE_SECRET_KEY is empty.
+def test_onboard_returns_503_when_stripe_not_configured(client, stripe_unconfigured) -> None:
     r = client.post("/api/me/stripe/onboard")
     assert r.status_code == 503
     assert "STRIPE_SECRET_KEY" in r.json()["detail"]
 
 
-def test_checkout_returns_503_when_stripe_not_configured(client, phil, db, make_user) -> None:
+def test_checkout_returns_503_when_stripe_not_configured(
+    client, stripe_unconfigured, phil, db, make_user
+) -> None:
     seller = _seller_with_stripe(db, make_user, onboarded=True)
     listing = _make_listing(
         db, seller_id=seller.id, course_id=phil.id, payment_methods=["stripe"]
@@ -157,7 +169,7 @@ def test_checkout_returns_503_when_stripe_not_configured(client, phil, db, make_
     assert r.status_code == 503
 
 
-def test_webhook_returns_503_when_stripe_not_configured(client) -> None:
+def test_webhook_returns_503_when_stripe_not_configured(client, stripe_unconfigured) -> None:
     r = client.post("/api/stripe/webhook", content=b"{}", headers={"stripe-signature": ""})
     assert r.status_code == 503
 

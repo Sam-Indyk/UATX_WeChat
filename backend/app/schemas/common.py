@@ -189,6 +189,20 @@ class SharedCourseOut(CourseOut):
     kind: EnrollmentKind
 
 
+class PublicUserOut(BaseModel):
+    """Public-facing profile shown on /users/:user_id. Deliberately omits
+    email (viewers don't need it) and stripe_onboarded (an internal
+    plumbing flag, not user info). Includes the seller's active listings
+    so the page can show them on one round-trip."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    display_name: str
+    avatar_url: str | None = None
+    active_listings: list[ListingOut]
+
+
 class ClassmateOut(BaseModel):
     id: str
     display_name: str

@@ -146,7 +146,13 @@ export default function ListingDetail() {
       )}
 
       <p className="text-sm text-slate-600">
-        Seller: {listing.seller.display_name}
+        Seller:{" "}
+        <Link
+          to={`/users/${listing.seller.id}`}
+          className="text-slate-700 underline hover:text-slate-900"
+        >
+          {listing.seller.display_name}
+        </Link>
         {user?.id === listing.seller.id && (
           <span className="ml-1 text-slate-500">(you)</span>
         )}

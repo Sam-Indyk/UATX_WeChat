@@ -15,6 +15,7 @@ import MyListingDetail from "./pages/MyListingDetail";
 import MyInquiries from "./pages/MyInquiries";
 import EverythingElse from "./pages/EverythingElse";
 import NewItem from "./pages/NewItem";
+import UserProfile from "./pages/UserProfile";
 import { useUnread } from "./hooks/useUnreadCount";
 
 export default function App() {
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/everything-else" element={<EverythingElse />} />
           <Route path="/everything-else/new" element={<RequireAuth><NewItem /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/users/:userId" element={<RequireAuth><UserProfile /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
