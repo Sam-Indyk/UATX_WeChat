@@ -125,6 +125,25 @@ def test_oversize_message_body_rejected(client, seller_with_listing) -> None:
 # --------------- Listing input validation ---------------
 
 
+def test_listing_price_over_cap_rejected(client, seller_with_listing) -> None:
+    """price_cents has le=100_000_00 (= $100K). Without an upper cap a
+    user typing a giant number would overflow Postgres INT4 and surface
+    a 500 — the cap turns that into a clean 422. Regression guard for
+    the "I typed a bunch of ones" bug Eitan reported."""
+    _seller, listing = seller_with_listing
+    r = client.post(
+        "/api/listings",
+        json={
+            "course_id": str(listing.course_id),
+            "title": "Eye-watering",
+            "author": "Anon",
+            "condition": "good",
+            "price_cents": 10_000_000_01,  # $100,000.01 — one cent over the cap
+        },
+    )
+    assert r.status_code == 422
+
+
 def test_listing_negative_price_rejected(client, seller_with_listing) -> None:
     """price_cents has ge=0 — a negative price would pay the buyer, which
     is the kind of thing that goes viral on Twitter."""

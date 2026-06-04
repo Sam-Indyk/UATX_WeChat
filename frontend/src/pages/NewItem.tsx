@@ -142,12 +142,14 @@ export default function NewItem() {
           value={Math.floor(priceCents / 100) || ""}
           onChange={(e) => {
             const digits = e.target.value.replace(/[^0-9]/g, "");
-            setPriceCents((parseInt(digits, 10) || 0) * 100);
+            // Clamp to $100,000 — backend enforces the same cap.
+            const dollars = Math.min(parseInt(digits, 10) || 0, 100_000);
+            setPriceCents(dollars * 100);
           }}
           placeholder="0"
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
-        <span className="block text-xs text-slate-500 mt-1">Whole dollars only.</span>
+        <span className="block text-xs text-slate-500 mt-1">Whole dollars only, max $100,000.</span>
       </Field>
 
       <Field label="Description">
