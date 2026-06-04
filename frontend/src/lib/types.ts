@@ -3,6 +3,10 @@ export type User = {
   email: string;
   display_name: string;
   avatar_url: string | null;
+  // True once this user has finished Stripe Connect onboarding (their
+  // account can charge). Drives whether "Pay with Stripe" appears on
+  // listings they're selling.
+  stripe_onboarded: boolean;
 };
 
 export type Course = {
