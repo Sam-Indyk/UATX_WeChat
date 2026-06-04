@@ -1,41 +1,78 @@
 import { Link } from "react-router-dom";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import Logo from "../components/Logo";
 
 export default function Home() {
   return (
-    <section className="space-y-6 py-6">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">UATX_WeChat</h1>
-        <p className="mt-2 text-slate-600 max-w-prose">
-          Buy and sell used textbooks with other UATX students. We match you with sellers
-          who took the same courses you're in now, so you find the right edition fast.
-        </p>
-      </header>
-
-      <SignedOut>
-        <Link
-          to="/sign-in"
-          className="inline-block rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700"
-        >
-          Sign in with your UATX Google
-        </Link>
-      </SignedOut>
-      <SignedIn>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/match"
-            className="inline-block rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700"
-          >
-            See books for my courses
-          </Link>
-          <Link
-            to="/listings"
-            className="inline-block rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
-          >
-            Browse all listings
-          </Link>
+    <div className="space-y-12 sm:space-y-16 py-6 sm:py-12">
+      {/* Hero */}
+      <section className="text-center space-y-6 max-w-2xl mx-auto">
+        <div className="flex justify-center">
+          <Logo size={96} className="text-amber-600" />
         </div>
-      </SignedIn>
-    </section>
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
+          Textbooks from the students<br className="hidden sm:inline" /> who took your class.
+        </h1>
+        <p className="text-lg text-slate-600 max-w-prose mx-auto">
+          UATX_WeChat matches you with upperclassmen who already passed the courses
+          you're in. Same edition, half the price, no shipping — and there's a
+          general marketplace for everything else.
+        </p>
+        <SignedOut>
+          <Link
+            to="/sign-in"
+            className="inline-block rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
+          >
+            Sign in with your UATX Google →
+          </Link>
+        </SignedOut>
+        <SignedIn>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link
+              to="/match"
+              className="rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
+            >
+              See books for my courses →
+            </Link>
+            <Link
+              to="/listings"
+              className="rounded-lg border border-slate-300 bg-white px-6 py-3 text-base font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Browse all listings
+            </Link>
+          </div>
+        </SignedIn>
+      </section>
+
+      {/* Feature highlights */}
+      <section className="grid gap-4 sm:grid-cols-3 max-w-4xl mx-auto">
+        <FeatureCard
+          title="Matched to your courses"
+          body="List the classes you're in, and we surface listings from students who took those same courses — sorted by who took them most recently, so you get the current edition."
+        />
+        <FeatureCard
+          title="Chat in real-time"
+          body="Message sellers in the app and arrange the handoff. Threads update live, with read receipts and per-conversation unread badges."
+        />
+        <FeatureCard
+          title="More than textbooks"
+          body="Furniture, electronics, kitchen gear, sports equipment — anything UATX students would sell to each other lives in Everything Else."
+        />
+      </section>
+
+      {/* Small footnote with project context */}
+      <p className="text-center text-xs text-slate-400">
+        Built for UATX students. A 3-week final project for Software Engineering, Spring 2026.
+      </p>
+    </div>
+  );
+}
+
+function FeatureCard({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-1.5 hover:border-slate-300 transition-colors">
+      <h2 className="font-semibold text-slate-900">{title}</h2>
+      <p className="text-sm text-slate-600 leading-relaxed">{body}</p>
+    </div>
   );
 }
