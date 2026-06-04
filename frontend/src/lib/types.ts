@@ -51,15 +51,26 @@ export const NON_BOOK_CATEGORIES: { value: Exclude<ListingCategory, "book">; lab
 
 /** Payment methods the seller is willing to accept on a listing. The
  *  enum is enforced by the backend's Pydantic Literal — keep this in
- *  sync with `PaymentMethod` in `backend/app/schemas/common.py`. */
+ *  sync with `PaymentMethod` in `backend/app/schemas/common.py`.
+ *
+ *  `in_app: true` means the platform actually processes the payment
+ *  (we have a Stripe Connect integration that handles the checkout
+ *  end-to-end). `in_app: false` means the buyer and seller arrange the
+ *  transfer themselves outside the app — we just signal that the seller
+ *  is willing to accept that method.
+ */
 export type PaymentMethod = "cash" | "venmo" | "zelle" | "paypal" | "stripe";
 
-export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: "cash", label: "Cash" },
-  { value: "venmo", label: "Venmo" },
-  { value: "zelle", label: "Zelle" },
-  { value: "paypal", label: "PayPal" },
-  { value: "stripe", label: "Stripe" },
+export const PAYMENT_METHODS: {
+  value: PaymentMethod;
+  label: string;
+  in_app: boolean;
+}[] = [
+  { value: "cash", label: "Cash", in_app: false },
+  { value: "venmo", label: "Venmo", in_app: false },
+  { value: "zelle", label: "Zelle", in_app: false },
+  { value: "paypal", label: "PayPal", in_app: false },
+  { value: "stripe", label: "Stripe", in_app: true },
 ];
 
 export type Listing = {
