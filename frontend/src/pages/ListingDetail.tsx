@@ -2,8 +2,19 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import { apiRequest, useApi } from "../lib/api";
-import type { Conversation, Enrollment, EnrollmentKind, Listing } from "../lib/types";
+import { formatRelativeDate } from "../lib/date";
+import type {
+  Conversation,
+  Enrollment,
+  EnrollmentKind,
+  Listing,
+  PublicUser,
+} from "../lib/types";
 import { PAYMENT_METHODS } from "../lib/types";
+
+// Cap on the "More from this seller" preview. The seller's profile page
+// (`/users/:id`) shows the full list; this row is a glance.
+const SELLER_OTHER_PREVIEW_CAP = 3;
 
 const VIEWER_KIND_LABEL: Record<EnrollmentKind, string> = {
   current: "You're in this class now",
@@ -36,6 +47,10 @@ export default function ListingDetail() {
   // (any kind). Drives the "You're in this class" chip. Fetched lazily
   // after the listing loads so we don't block on a second request.
   const [viewerKind, setViewerKind] = useState<EnrollmentKind | null>(null);
+  // Other active listings from the same seller. Capped to a small
+  // preview; the seller's profile page has the full list.
+  const [otherFromSeller, setOtherFromSeller] = useState<Listing[]>([]);
+  const [sellerTotalActive, setSellerTotalActive] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -59,6 +74,28 @@ export default function ListingDetail() {
       })
       .catch(() => setViewerKind(null));
   }, [listing, user]);
+
+  // Fetch the seller's other active listings for the "More from this
+  // seller" section. Reuses /api/users/:id which already returns the
+  // full active_listings array. Silent on failure.
+  useEffect(() => {
+    if (!listing) {
+      setOtherFromSeller([]);
+      setSellerTotalActive(0);
+      return;
+    }
+    const currentId = listing.id;
+    apiRequest<PublicUser>(`/api/users/${listing.seller.id}`)
+      .then((profile) => {
+        const others = profile.active_listings.filter((l) => l.id !== currentId);
+        setSellerTotalActive(others.length);
+        setOtherFromSeller(others.slice(0, SELLER_OTHER_PREVIEW_CAP));
+      })
+      .catch(() => {
+        setOtherFromSeller([]);
+        setSellerTotalActive(0);
+      });
+  }, [listing]);
 
   async function contactSeller() {
     if (!id) return;
@@ -238,6 +275,59 @@ export default function ListingDetail() {
       <SignedOut>
         <p className="text-sm text-slate-500">Sign in to message the seller.</p>
       </SignedOut>
+
+      {otherFromSeller.length > 0 && (
+        <section className="pt-6 border-t border-slate-200">
+          <div className="flex items-baseline justify-between gap-2 mb-3">
+            <h2 className="text-sm font-semibold">
+              More from {listing.seller.display_name}
+            </h2>
+            {sellerTotalActive > SELLER_OTHER_PREVIEW_CAP && (
+              <Link
+                to={`/users/${listing.seller.id}`}
+                className="text-xs text-slate-500 underline hover:text-slate-900"
+              >
+                See all {sellerTotalActive} →
+              </Link>
+            )}
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-3">
+            {otherFromSeller.map((other) => (
+              <li key={other.id}>
+                <Link
+                  to={`/listings/${other.id}`}
+                  className="block overflow-hidden rounded-lg border border-slate-200 bg-white transition-colors hover:border-slate-400 hover:shadow-sm"
+                >
+                  {other.image_url && (
+                    <img
+                      src={other.image_url}
+                      alt=""
+                      className="w-full h-28 object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-medium truncate">{other.title}</p>
+                      <p className="text-sm font-semibold shrink-0">
+                        ${(other.price_cents / 100).toFixed(2)}
+                      </p>
+                    </div>
+                    {other.category === "book" && other.author && (
+                      <p className="text-xs text-slate-500 truncate mt-0.5">
+                        {other.author}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-slate-400">
+                      Posted {formatRelativeDate(other.created_at)}
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </article>
   );
 }
