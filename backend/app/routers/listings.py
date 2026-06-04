@@ -73,13 +73,6 @@ def create_listing(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> Listing:
-    # Books require an author; general items don't.
-    if payload.category == "book" and not (payload.author and payload.author.strip()):
-        raise HTTPException(
-            status_code=422,
-            detail="Books must have an author. Set `author` on the request body.",
-        )
-
     listing = Listing(
         seller_id=user.id,
         category=payload.category,

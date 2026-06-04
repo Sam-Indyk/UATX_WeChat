@@ -50,9 +50,12 @@ def _item_payload(**overrides) -> dict:
     return base
 
 
-def test_create_book_requires_author(client, course) -> None:
+def test_create_book_without_author_allowed(client, course) -> None:
+    """Author is optional on books — some are unattributed or compiled.
+    The Sell-a-book form lets the seller leave it blank."""
     r = client.post("/api/listings", json=_book_payload(course.id, author=None))
-    assert r.status_code == 422
+    assert r.status_code == 201
+    assert r.json()["author"] is None
 
 
 def test_create_general_item_works_without_author(client) -> None:

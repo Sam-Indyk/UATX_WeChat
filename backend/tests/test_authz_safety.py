@@ -160,11 +160,11 @@ def test_listing_unknown_payment_method_rejected(client, seller_with_listing) ->
     assert r.status_code == 422
 
 
-def test_book_requires_author(client, seller_with_listing) -> None:
-    """Books explicitly require an author (router-level check), since
-    'Unknown author' on every book listing would degrade the marketplace.
-    The validation is at /api/listings POST, not Pydantic — make sure it
-    actually fires."""
+def test_book_without_author_is_accepted(client, seller_with_listing) -> None:
+    """Author is optional on book listings — some books are unattributed,
+    compiled, or anonymous (lab manuals, classics, course readers). The
+    Sell-a-book form lets the seller leave it blank, and the backend must
+    accept that."""
     _seller, listing = seller_with_listing
     r = client.post(
         "/api/listings",
@@ -176,4 +176,5 @@ def test_book_requires_author(client, seller_with_listing) -> None:
             "price_cents": 1500,
         },
     )
-    assert r.status_code == 422
+    assert r.status_code == 201
+    assert r.json()["author"] is None

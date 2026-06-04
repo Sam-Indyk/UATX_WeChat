@@ -107,9 +107,8 @@ export default function NewListing() {
         />
       </Field>
 
-      <Field label="Author">
+      <Field label="Author (optional)">
         <input
-          required
           value={author}
           onChange={(e) => setAuthor(e.target.value)}
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -140,14 +139,18 @@ export default function NewListing() {
 
       <Field label="Price (USD)">
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           required
-          min={0}
-          step="0.01"
-          value={(priceCents / 100).toFixed(2)}
-          onChange={(e) => setPriceCents(Math.round(parseFloat(e.target.value || "0") * 100))}
+          value={Math.floor(priceCents / 100) || ""}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, "");
+            setPriceCents((parseInt(digits, 10) || 0) * 100);
+          }}
+          placeholder="0"
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
+        <span className="block text-xs text-slate-500 mt-1">Whole dollars only.</span>
       </Field>
 
       <Field label="Description">

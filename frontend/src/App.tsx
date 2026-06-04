@@ -72,16 +72,17 @@ function Nav() {
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-6">
         <Link to="/" className="font-semibold tracking-tight">UATX_WeChat</Link>
 
-        {/* Desktop links — hidden below md. */}
-        <Link to="/listings" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">Books</Link>
-        <Link to="/everything-else" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">Everything else</Link>
+        {/* Desktop links — hidden below md. whitespace-nowrap keeps multi-
+            word labels on one line; without it flex shrinking would wrap
+            "My classes" / "For my courses" / etc. across two lines. */}
+        <Link to="/listings" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">Books</Link>
+        <Link to="/everything-else" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">Everything else</Link>
         <SignedIn>
-          <Link to="/my-classes" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">My classes</Link>
-          <Link to="/match" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
+          <Link to="/my-classes" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">My classes</Link>
+          <Link to="/match" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
           <ClassmatesLink mobile={false} />
           <MyListingsLink mobile={false} />
           <MyInquiriesLink mobile={false} />
-          <Link to="/listings/new" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">Sell a book</Link>
         </SignedIn>
 
         <div className="ml-auto flex items-center gap-3">
@@ -89,7 +90,7 @@ function Nav() {
             <Link to="/sign-in" className="text-sm font-medium">Sign in</Link>
           </SignedOut>
           <SignedIn>
-            <Link to="/settings" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">Settings</Link>
+            <Link to="/settings" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">Settings</Link>
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
 
@@ -131,7 +132,6 @@ function Nav() {
               <ClassmatesLink mobile onClick={close} />
               <MyListingsLink mobile onClick={close} />
               <MyInquiriesLink mobile onClick={close} />
-              <MobileLink to="/listings/new" onClick={close}>Sell a book</MobileLink>
               <hr className="my-1 border-slate-100" />
               <MobileLink to="/settings" onClick={close}>Settings</MobileLink>
             </SignedIn>
