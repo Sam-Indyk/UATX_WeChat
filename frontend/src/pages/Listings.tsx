@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { SignedIn } from "@clerk/clerk-react";
 import { apiRequest } from "../lib/api";
 import CourseSearchPicker from "../components/CourseSearchPicker";
 import type { Course, Listing } from "../lib/types";
@@ -32,16 +33,26 @@ export default function Listings() {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold shrink-0">Listings</h1>
-        <div className="w-full sm:w-auto sm:max-w-xs sm:flex-1">
-          <CourseSearchPicker
-            courses={courses ?? []}
-            selectedId={courseFilter || null}
-            onChange={(id) => (id ? setParams({ course_id: id }) : setParams({}))}
-            placeholder="Filter by course…"
-            allowEmpty
-            emptyLabel="All courses"
-          />
+        <h1 className="text-2xl font-semibold shrink-0">Books</h1>
+        <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:justify-end">
+          <div className="flex-1 sm:max-w-xs">
+            <CourseSearchPicker
+              courses={courses ?? []}
+              selectedId={courseFilter || null}
+              onChange={(id) => (id ? setParams({ course_id: id }) : setParams({}))}
+              placeholder="Filter by course…"
+              allowEmpty
+              emptyLabel="All courses"
+            />
+          </div>
+          <SignedIn>
+            <Link
+              to="/listings/new"
+              className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-white text-sm font-medium hover:bg-amber-700 whitespace-nowrap"
+            >
+              + Sell a book
+            </Link>
+          </SignedIn>
         </div>
       </div>
 
