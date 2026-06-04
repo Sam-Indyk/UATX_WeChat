@@ -113,6 +113,15 @@ export type Conversation = {
  *  "current" — those are the courses the classmates query is scoped to. */
 export type SharedCourse = Course & { kind: EnrollmentKind };
 
+/** Public-facing user profile returned by GET /api/users/:id.
+ *  Deliberately narrower than User — no email, no stripe_onboarded. */
+export type PublicUser = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  active_listings: Listing[];
+};
+
 export type Classmate = {
   id: string;
   display_name: string;
