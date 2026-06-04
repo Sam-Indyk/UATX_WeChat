@@ -2,8 +2,20 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import { apiRequest, useApi } from "../lib/api";
-import type { Conversation, Listing } from "../lib/types";
+import type { Conversation, Enrollment, EnrollmentKind, Listing } from "../lib/types";
 import { PAYMENT_METHODS } from "../lib/types";
+
+const VIEWER_KIND_LABEL: Record<EnrollmentKind, string> = {
+  current: "You're in this class now",
+  past: "You took this class",
+  upcoming: "You're signed up for this class",
+};
+
+const VIEWER_KIND_STYLES: Record<EnrollmentKind, string> = {
+  current: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  past: "bg-slate-100 text-slate-700 border-slate-200",
+  upcoming: "bg-sky-100 text-sky-800 border-sky-200",
+};
 
 export default function ListingDetail() {
   const { id } = useParams();
@@ -20,6 +32,10 @@ export default function ListingDetail() {
   const [error, setError] = useState<string | null>(null);
   const [contacting, setContacting] = useState(false);
   const [paying, setPaying] = useState(false);
+  // Set if the signed-in viewer is enrolled in the listing's course
+  // (any kind). Drives the "You're in this class" chip. Fetched lazily
+  // after the listing loads so we don't block on a second request.
+  const [viewerKind, setViewerKind] = useState<EnrollmentKind | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -27,6 +43,22 @@ export default function ListingDetail() {
       .then(setListing)
       .catch((e) => setError(`Couldn't load listing: ${String(e)}`));
   }, [id]);
+
+  // Check if the signed-in viewer is enrolled in this listing's course.
+  // Silent on failure — the chip is optional polish, not load-bearing.
+  useEffect(() => {
+    if (!listing?.course || !user) {
+      setViewerKind(null);
+      return;
+    }
+    const courseId = listing.course.id;
+    apiRequest<Enrollment[]>("/api/me/enrollments")
+      .then((enrollments) => {
+        const found = enrollments.find((e) => e.course.id === courseId);
+        setViewerKind(found?.kind ?? null);
+      })
+      .catch(() => setViewerKind(null));
+  }, [listing, user]);
 
   async function contactSeller() {
     if (!id) return;
@@ -98,6 +130,14 @@ export default function ListingDetail() {
               <p className="text-sm text-slate-500">
                 {listing.course.code} · {listing.course.title}
               </p>
+            )}
+            {viewerKind && (
+              <span
+                className={`inline-flex items-center gap-1 mt-2 rounded-md border px-2 py-1 text-xs font-medium ${VIEWER_KIND_STYLES[viewerKind]}`}
+              >
+                <span aria-hidden>🎓</span>
+                {VIEWER_KIND_LABEL[viewerKind]}
+              </span>
             )}
           </>
         ) : (

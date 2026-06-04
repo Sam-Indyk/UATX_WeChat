@@ -189,6 +189,23 @@ class SharedCourseOut(CourseOut):
     kind: EnrollmentKind
 
 
+FeedbackCategory = Literal["feature", "bug", "other"]
+
+
+class FeedbackCreate(BaseModel):
+    category: FeedbackCategory
+    body: str = Field(min_length=1, max_length=4000)
+
+
+class FeedbackOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    category: FeedbackCategory
+    body: str
+    created_at: datetime
+
+
 class PublicUserOut(BaseModel):
     """Public-facing profile shown on /users/:user_id. Deliberately omits
     email (viewers don't need it) and stripe_onboarded (an internal

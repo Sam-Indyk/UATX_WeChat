@@ -63,6 +63,12 @@ export default function Home() {
       {/* Small footnote with project context */}
       <p className="text-center text-xs text-slate-400">
         Built for UATX students. A 3-week final project for Software Engineering, Spring 2026.
+        <SignedIn>
+          {" · "}
+          <Link to="/feedback" className="underline hover:text-slate-600">
+            Got an idea? →
+          </Link>
+        </SignedIn>
       </p>
     </div>
   );

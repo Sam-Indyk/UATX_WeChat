@@ -16,6 +16,7 @@ import MyInquiries from "./pages/MyInquiries";
 import EverythingElse from "./pages/EverythingElse";
 import NewItem from "./pages/NewItem";
 import UserProfile from "./pages/UserProfile";
+import Feedback from "./pages/Feedback";
 import Logo from "./components/Logo";
 import { useUnread } from "./hooks/useUnreadCount";
 
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/everything-else/new" element={<RequireAuth><NewItem /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
           <Route path="/users/:userId" element={<RequireAuth><UserProfile /></RequireAuth>} />
+          <Route path="/feedback" element={<RequireAuth><Feedback /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
