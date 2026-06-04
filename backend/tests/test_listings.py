@@ -42,6 +42,42 @@ def test_create_listing_rejects_bad_condition(client, course) -> None:
     assert r.status_code == 422
 
 
+def test_list_listings_filters_by_search_query(client, course, db: Session) -> None:
+    """`?q=` does case-insensitive substring match on title OR author.
+    Used by the Books browse search box (PR adding this test)."""
+    client.post("/api/listings", json=_payload(course.id, title="Republic", author="Plato"))
+    client.post("/api/listings", json=_payload(course.id, title="Phaedrus", author="Plato"))
+    client.post("/api/listings", json=_payload(course.id, title="Metaphysics", author="Aristotle"))
+
+    # Title hit
+    rows = client.get("/api/listings?q=republic").json()
+    assert [r["title"] for r in rows] == ["Republic"]
+
+    # Author hit — matches both Plato books
+    rows = client.get("/api/listings?q=plato").json()
+    titles = sorted(r["title"] for r in rows)
+    assert titles == ["Phaedrus", "Republic"]
+
+    # Case-insensitive
+    rows = client.get("/api/listings?q=ARIS").json()
+    assert [r["title"] for r in rows] == ["Metaphysics"]
+
+    # Whitespace-only query is treated as no filter
+    rows = client.get("/api/listings?q=%20%20").json()
+    assert len(rows) == 3
+
+
+def test_list_listings_search_escapes_like_wildcards(client, course, db: Session) -> None:
+    """A user typing '%' or '_' shouldn't get regex-like behavior — the
+    server escapes those before passing to ILIKE."""
+    client.post("/api/listings", json=_payload(course.id, title="100% Original"))
+    client.post("/api/listings", json=_payload(course.id, title="No special chars"))
+
+    # '%' should match the literal character, not act as a wildcard
+    rows = client.get("/api/listings?q=%25").json()
+    assert [r["title"] for r in rows] == ["100% Original"]
+
+
 def test_list_listings_filters_by_course(client, course, db: Session) -> None:
     other = Course(id=uuid.uuid4(), code="MATH 201", title="Calculus I")
     db.add(other)

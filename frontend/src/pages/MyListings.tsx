@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApi } from "../lib/api";
+import { formatRelativeDate } from "../lib/date";
 import type { Listing } from "../lib/types";
 import { NON_BOOK_CATEGORIES } from "../lib/types";
 
@@ -131,6 +132,10 @@ export default function MyListings() {
                       <p className="text-xs text-slate-500 capitalize">{l.status}</p>
                     </div>
                   </div>
+
+                  <p className="mt-2 text-xs text-slate-400">
+                    Posted {formatRelativeDate(l.created_at)}
+                  </p>
 
                   {unread > 0 && (
                     <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-red-500 px-2 py-0.5 text-white text-xs font-semibold">

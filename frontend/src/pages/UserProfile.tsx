@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { apiRequest, useApi } from "../lib/api";
+import { formatRelativeDate } from "../lib/date";
 import type { Conversation, PublicUser } from "../lib/types";
 import { NON_BOOK_CATEGORIES } from "../lib/types";
 
@@ -129,6 +130,9 @@ export default function UserProfile() {
                         ${(l.price_cents / 100).toFixed(2)}
                       </p>
                     </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Posted {formatRelativeDate(l.created_at)}
+                    </p>
                   </div>
                 </Link>
               </li>
