@@ -156,7 +156,7 @@ export default function ListingDetail() {
       )}
 
       <header>
-        <h1 className="text-2xl font-semibold">{listing.title}</h1>
+        <h1 className="text-2xl font-semibold break-words">{listing.title}</h1>
         {listing.category === "book" ? (
           <>
             <p className="text-slate-600">
@@ -308,7 +308,7 @@ export default function ListingDetail() {
                   )}
                   <div className="p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium truncate">{other.title}</p>
+                      <p className="text-sm font-medium truncate min-w-0 flex-1">{other.title}</p>
                       <p className="text-sm font-semibold shrink-0">
                         ${(other.price_cents / 100).toFixed(2)}
                       </p>
