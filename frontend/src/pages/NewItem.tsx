@@ -164,22 +164,37 @@ export default function NewItem() {
       </Field>
 
       <Field label="Payment methods accepted">
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
+        <p className="text-xs text-slate-600 mb-2">
+          Only <span className="font-medium">Stripe</span> is processed in-app —
+          buyers can pay through Stripe's hosted checkout and we route the money
+          to your connected account. For the others, you'll arrange the transfer
+          with the buyer yourself once you've matched in chat.
+        </p>
+        <div className="flex flex-col gap-1.5">
           {PAYMENT_METHODS.map((pm) => (
             <label
               key={pm.value}
-              className="inline-flex items-center gap-1.5 text-sm cursor-pointer"
+              className="inline-flex items-center gap-2 text-sm cursor-pointer"
             >
               <input
                 type="checkbox"
                 checked={paymentMethods.includes(pm.value)}
                 onChange={() => togglePaymentMethod(pm.value)}
               />
-              {pm.label}
+              <span>{pm.label}</span>
+              {pm.in_app ? (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+                  Processed in-app
+                </span>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                  Arrange with buyer
+                </span>
+              )}
             </label>
           ))}
         </div>
-        <span className="block text-xs text-slate-500 mt-1">
+        <span className="block text-xs text-slate-500 mt-2">
           Optional. Pick any combination.
         </span>
       </Field>

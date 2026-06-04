@@ -190,15 +190,34 @@ export default function ListingDetail() {
 
       {/* Payment methods the seller said they accept. Order matches the
           canonical order in PAYMENT_METHODS (cash → venmo → zelle → paypal
-          → stripe), regardless of how the seller saved them. Hidden when
-          empty — no "Accepts: nothing" line. */}
+          → stripe), regardless of how the seller saved them. Each method
+          carries an "in-app" or "arrange directly" chip so buyers know
+          which transactions actually go through our checkout vs. which
+          they'll have to handle with the seller themselves. */}
       {listing.payment_methods.length > 0 && (
-        <p className="text-sm text-slate-600">
-          <span className="font-medium">Accepts:</span>{" "}
-          {PAYMENT_METHODS.filter((pm) => listing.payment_methods.includes(pm.value))
-            .map((pm) => pm.label)
-            .join(" · ")}
-        </p>
+        <div className="text-sm text-slate-600 space-y-1">
+          <span className="font-medium">Accepts:</span>
+          <ul className="flex flex-wrap gap-2">
+            {PAYMENT_METHODS.filter((pm) =>
+              listing.payment_methods.includes(pm.value),
+            ).map((pm) => (
+              <li key={pm.value}>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${
+                    pm.in_app
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  {pm.label}
+                  <span className="text-[10px] opacity-75">
+                    {pm.in_app ? "in-app" : "arrange directly"}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {listing.description && (
