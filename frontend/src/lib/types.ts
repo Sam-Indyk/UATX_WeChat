@@ -45,6 +45,19 @@ export const NON_BOOK_CATEGORIES: { value: Exclude<ListingCategory, "book">; lab
   { value: "other", label: "Other" },
 ];
 
+/** Payment methods the seller is willing to accept on a listing. The
+ *  enum is enforced by the backend's Pydantic Literal — keep this in
+ *  sync with `PaymentMethod` in `backend/app/schemas/common.py`. */
+export type PaymentMethod = "cash" | "venmo" | "zelle" | "paypal" | "stripe";
+
+export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "cash", label: "Cash" },
+  { value: "venmo", label: "Venmo" },
+  { value: "zelle", label: "Zelle" },
+  { value: "paypal", label: "PayPal" },
+  { value: "stripe", label: "Stripe" },
+];
+
 export type Listing = {
   id: string;
   seller: User;
@@ -59,6 +72,7 @@ export type Listing = {
   description: string;
   status: ListingStatus;
   image_url: string | null;
+  payment_methods: PaymentMethod[];
   created_at: string;
   // Only populated by GET /api/me/listings. 0 elsewhere.
   unread_count: number;

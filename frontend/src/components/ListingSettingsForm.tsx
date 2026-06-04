@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest, useApi } from "../lib/api";
-import type { Condition, Course, Listing, ListingStatus } from "../lib/types";
+import type { Condition, Course, Listing, ListingStatus, PaymentMethod } from "../lib/types";
+import { PAYMENT_METHODS } from "../lib/types";
 import CourseSearchPicker from "./CourseSearchPicker";
 
 const CONDITIONS: Condition[] = ["new", "like_new", "good", "fair", "poor"];
@@ -25,6 +26,15 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
   const [priceCents, setPriceCents] = useState(listing.price_cents);
   const [description, setDescription] = useState(listing.description);
   const [courseId, setCourseId] = useState<string | null>(listing.course?.id ?? null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(
+    listing.payment_methods,
+  );
+
+  function togglePaymentMethod(m: PaymentMethod) {
+    setPaymentMethods((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
+    );
+  }
 
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [saving, setSaving] = useState(false);
@@ -47,6 +57,7 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
     setPriceCents(listing.price_cents);
     setDescription(listing.description);
     setCourseId(listing.course?.id ?? null);
+    setPaymentMethods(listing.payment_methods);
   }, [listing]);
 
   async function save(e: FormEvent) {
@@ -64,6 +75,7 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
           price_cents: priceCents,
           description,
           course_id: courseId,
+          payment_methods: paymentMethods,
         },
       });
       setSavedAt(Date.now());
@@ -247,6 +259,24 @@ export default function ListingSettingsForm({ listing, onChange }: Props) {
             maxLength={2000}
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           />
+        </Field>
+
+        <Field label="Payment methods accepted">
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {PAYMENT_METHODS.map((pm) => (
+              <label
+                key={pm.value}
+                className="inline-flex items-center gap-1.5 text-sm cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={paymentMethods.includes(pm.value)}
+                  onChange={() => togglePaymentMethod(pm.value)}
+                />
+                {pm.label}
+              </label>
+            ))}
+          </div>
         </Field>
 
         {error && <p className="text-red-600 text-sm">{error}</p>}

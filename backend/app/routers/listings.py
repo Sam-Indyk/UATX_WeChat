@@ -90,6 +90,7 @@ def create_listing(
         condition=payload.condition,
         price_cents=payload.price_cents,
         description=payload.description,
+        payment_methods=list(payload.payment_methods),
     )
     db.add(listing)
     db.commit()
@@ -129,6 +130,10 @@ def update_listing(
         listing.course_id = payload.course_id
     if payload.category is not None:
         listing.category = payload.category
+    if payload.payment_methods is not None:
+        # Empty list is valid (means: clear all methods). Distinguish
+        # from None (means: leave unchanged) — Pydantic does this for us.
+        listing.payment_methods = list(payload.payment_methods)
 
     db.commit()
     db.refresh(listing)

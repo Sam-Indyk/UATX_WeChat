@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import String, DateTime, ForeignKey, Integer, Text, CheckConstraint, Index, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -21,6 +21,7 @@ CATEGORIES = (
     "transportation",
     "other",
 )
+PAYMENT_METHODS = ("cash", "venmo", "zelle", "paypal", "stripe")
 
 
 class Listing(Base):
@@ -69,6 +70,14 @@ class Listing(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Methods the seller is willing to accept (cash / venmo / zelle /
+    # paypal / stripe). Enforced at the API layer via Pydantic Literal;
+    # no Postgres CHECK on array contents. Empty array = seller didn't
+    # specify (the UI just hides the "Accepts:" line then).
+    payment_methods: Mapped[list[str]] = mapped_column(
+        ARRAY(String), nullable=False, server_default="{}", default=list
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
