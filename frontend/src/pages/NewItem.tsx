@@ -90,8 +90,8 @@ export default function NewItem() {
         <h1 className="text-2xl font-semibold">List an item</h1>
         <p className="text-sm text-slate-600">
           Posting to <span className="font-medium">Everything else</span> — not a textbook.
-          For books, use{" "}
-          <span className="font-medium">Sell a book</span> in the top nav instead.
+          For books, head to the <span className="font-medium">Books</span> tab and
+          hit <span className="font-medium">+ Sell a book</span>.
         </p>
       </header>
 
@@ -136,14 +136,18 @@ export default function NewItem() {
 
       <Field label="Price (USD)">
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           required
-          min={0}
-          step="0.01"
-          value={(priceCents / 100).toFixed(2)}
-          onChange={(e) => setPriceCents(Math.round(parseFloat(e.target.value || "0") * 100))}
+          value={Math.floor(priceCents / 100) || ""}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, "");
+            setPriceCents((parseInt(digits, 10) || 0) * 100);
+          }}
+          placeholder="0"
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
+        <span className="block text-xs text-slate-500 mt-1">Whole dollars only.</span>
       </Field>
 
       <Field label="Description">
