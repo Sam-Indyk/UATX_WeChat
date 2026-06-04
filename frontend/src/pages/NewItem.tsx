@@ -153,6 +153,7 @@ export default function NewItem() {
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
+          capture="environment"
           onChange={(e) => {
             const f = e.target.files?.[0] ?? null;
             setImageError(null);
@@ -183,7 +184,7 @@ export default function NewItem() {
       <button
         type="submit"
         disabled={submitting || !image}
-        className="rounded-md bg-slate-900 px-4 py-2 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+        className="rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
       >
         {submitting ? "Posting…" : "Post listing"}
       </button>

@@ -164,7 +164,9 @@ function ChatSubtab({
 
   return (
     <div className="grid gap-4 md:grid-cols-[260px_1fr]">
-      <ul className="space-y-1 border-r border-slate-200 pr-3">
+      {/* Mobile: hide the buyer list while a thread is open so the
+          conversation fills the screen. Back button restores it. */}
+      <ul className={`space-y-1 md:border-r md:border-slate-200 md:pr-3 ${activeConvoId ? "hidden md:block" : ""}`}>
         {convos.map((c) => {
           const unread = c.unread_count;
           const isActive = c.id === activeConvoId;
@@ -193,9 +195,18 @@ function ChatSubtab({
         })}
       </ul>
 
-      <div className="min-w-0">
+      <div className={`min-w-0 ${activeConvoId ? "" : "hidden md:block"}`}>
         {activeConvoId ? (
-          <ConversationThread conversationId={activeConvoId} />
+          <>
+            <button
+              type="button"
+              onClick={() => onSelectConvo(null)}
+              className="md:hidden mb-3 inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
+            >
+              ← Back to buyers
+            </button>
+            <ConversationThread conversationId={activeConvoId} />
+          </>
         ) : (
           <p className="text-slate-500 text-sm">
             Pick a buyer on the left to see your conversation.

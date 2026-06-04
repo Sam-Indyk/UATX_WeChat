@@ -103,6 +103,7 @@ export default function Settings() {
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              capture="user"
               onChange={(e) => {
                 setAvatarError(null);
                 setAvatarFile(e.target.files?.[0] ?? null);
@@ -112,7 +113,7 @@ export default function Settings() {
             <button
               type="submit"
               disabled={!avatarFile || avatarUploading}
-              className="rounded-md bg-slate-900 px-3 py-1.5 text-white text-xs font-medium hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-md bg-amber-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-amber-700 disabled:opacity-50"
             >
               {avatarUploading ? "Uploading…" : "Upload"}
             </button>
@@ -163,7 +164,7 @@ export default function Settings() {
         <button
           type="submit"
           disabled={saving || unchanged || !trimmed}
-          className="rounded-md bg-slate-900 px-4 py-2 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-md bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save"}
         </button>

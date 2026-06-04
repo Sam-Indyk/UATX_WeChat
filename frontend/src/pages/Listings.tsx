@@ -31,9 +31,9 @@ export default function Listings() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold shrink-0">Listings</h1>
-        <div className="w-full max-w-xs">
+        <div className="w-full sm:w-auto sm:max-w-xs sm:flex-1">
           <CourseSearchPicker
             courses={courses ?? []}
             selectedId={courseFilter || null}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { SignedIn, SignedOut, SignIn, UserButton } from "@clerk/clerk-react";
 import Home from "./pages/Home";
@@ -18,7 +19,7 @@ import { useUnread } from "./hooks/useUnreadCount";
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-slate-50">
       <Nav />
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
         <Routes>
@@ -50,47 +51,161 @@ export default function App() {
   );
 }
 
+/** Top nav. Horizontal at >=md, hamburger + slide-down menu below. The
+ *  signed-in nav has six links plus the user controls — too many to fit
+ *  on a phone, so on mobile we collapse everything except the brand and
+ *  the user button into a menu trigger. */
 function Nav() {
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const close = () => setOpen(false);
+
+  // Auto-close the mobile menu on any route change.
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, location.search]);
+
   return (
     <nav className="border-b border-slate-200 bg-white">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-6">
         <Link to="/" className="font-semibold tracking-tight">UATX_WeChat</Link>
-        <Link to="/listings" className="text-sm text-slate-600 hover:text-slate-900">Books</Link>
-        <Link to="/everything-else" className="text-sm text-slate-600 hover:text-slate-900">Everything else</Link>
+
+        {/* Desktop links — hidden below md. */}
+        <Link to="/listings" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">Books</Link>
+        <Link to="/everything-else" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">Everything else</Link>
         <SignedIn>
-          <Link to="/my-classes" className="text-sm text-slate-600 hover:text-slate-900">My classes</Link>
-          <Link to="/match" className="text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
-          <ClassmatesLink />
-          <MyListingsLink />
-          <MyInquiriesLink />
-          <Link to="/listings/new" className="text-sm text-slate-600 hover:text-slate-900">Sell a book</Link>
+          <Link to="/my-classes" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">My classes</Link>
+          <Link to="/match" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
+          <ClassmatesLink mobile={false} />
+          <MyListingsLink mobile={false} />
+          <MyInquiriesLink mobile={false} />
+          <Link to="/listings/new" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">Sell a book</Link>
         </SignedIn>
+
         <div className="ml-auto flex items-center gap-3">
           <SignedOut>
             <Link to="/sign-in" className="text-sm font-medium">Sign in</Link>
           </SignedOut>
           <SignedIn>
-            <Link to="/settings" className="text-sm text-slate-600 hover:text-slate-900">Settings</Link>
+            <Link to="/settings" className="hidden md:inline text-sm text-slate-600 hover:text-slate-900">Settings</Link>
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
+
+          {/* Hamburger — only below md. */}
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="md:hidden inline-flex items-center justify-center w-11 h-11 -mr-2 rounded-md text-slate-700 hover:bg-slate-100"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              {open ? (
+                <>
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                  <line x1="6" y1="18" x2="18" y2="6" />
+                </>
+              ) : (
+                <>
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </>
+              )}
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Mobile slide-down menu — only below md. */}
+      {open && (
+        <div className="md:hidden border-t border-slate-200 bg-white">
+          <div className="max-w-5xl mx-auto px-4 py-2 flex flex-col">
+            <MobileLink to="/listings" onClick={close}>Books</MobileLink>
+            <MobileLink to="/everything-else" onClick={close}>Everything else</MobileLink>
+            <SignedIn>
+              <MobileLink to="/my-classes" onClick={close}>My classes</MobileLink>
+              <MobileLink to="/match" onClick={close}>For my courses</MobileLink>
+              <ClassmatesLink mobile onClick={close} />
+              <MyListingsLink mobile onClick={close} />
+              <MyInquiriesLink mobile onClick={close} />
+              <MobileLink to="/listings/new" onClick={close}>Sell a book</MobileLink>
+              <hr className="my-1 border-slate-100" />
+              <MobileLink to="/settings" onClick={close}>Settings</MobileLink>
+            </SignedIn>
+            <SignedOut>
+              <MobileLink to="/sign-in" onClick={close}>Sign in</MobileLink>
+            </SignedOut>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
 
-function MyListingsLink() {
-  // Per-context unread: how many incoming messages across listings I'm
-  // selling that I haven't read yet. From PR #17's /api/me/unread-counts.
-  const { counts } = useUnread();
-  const unread = counts.listings;
+function MobileLink({
+  to,
+  onClick,
+  children,
+  badge,
+}: {
+  to: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  badge?: number;
+}) {
   return (
-    <Link to="/my-listings" className="relative text-sm text-slate-600 hover:text-slate-900">
-      My listings
+    <Link
+      to={to}
+      onClick={onClick}
+      className="flex items-center justify-between px-2 py-3 text-base text-slate-700 hover:bg-slate-50 rounded-md min-h-[44px]"
+    >
+      <span>{children}</span>
+      {badge != null && badge > 0 && (
+        <span
+          className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold flex items-center justify-center"
+          aria-label={`${badge} unread`}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/** Shared shell for the three nav links that carry an unread badge. The
+ *  badge styling differs between desktop (absolute-positioned chip beside
+ *  the link text) and mobile (inline-aligned at the row's right edge), so
+ *  we branch on `mobile`. */
+function NavBadgeLink({
+  to,
+  label,
+  unread,
+  mobile,
+  onClick,
+  ariaSuffix,
+}: {
+  to: string;
+  label: string;
+  unread: number;
+  mobile: boolean;
+  onClick?: () => void;
+  ariaSuffix: string;
+}) {
+  if (mobile) {
+    return (
+      <MobileLink to={to} onClick={onClick ?? (() => {})} badge={unread}>
+        {label}
+      </MobileLink>
+    );
+  }
+  return (
+    <Link to={to} className="hidden md:inline relative text-sm text-slate-600 hover:text-slate-900">
+      {label}
       {unread > 0 && (
         <span
           className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
-          aria-label={`${unread} unread on your listings`}
+          aria-label={`${unread} ${ariaSuffix}`}
         >
           {unread > 99 ? "99+" : unread}
         </span>
@@ -99,39 +214,45 @@ function MyListingsLink() {
   );
 }
 
-function ClassmatesLink() {
+function MyListingsLink({ mobile, onClick }: { mobile: boolean; onClick?: () => void }) {
   const { counts } = useUnread();
-  const unread = counts.dms;
   return (
-    <Link to="/classmates" className="relative text-sm text-slate-600 hover:text-slate-900">
-      Classmates
-      {unread > 0 && (
-        <span
-          className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
-          aria-label={`${unread} unread DMs`}
-        >
-          {unread > 99 ? "99+" : unread}
-        </span>
-      )}
-    </Link>
+    <NavBadgeLink
+      to="/my-listings"
+      label="My listings"
+      unread={counts.listings}
+      mobile={mobile}
+      onClick={onClick}
+      ariaSuffix="unread on your listings"
+    />
   );
 }
 
-function MyInquiriesLink() {
+function ClassmatesLink({ mobile, onClick }: { mobile: boolean; onClick?: () => void }) {
   const { counts } = useUnread();
-  const unread = counts.inquiries;
   return (
-    <Link to="/my-inquiries" className="relative text-sm text-slate-600 hover:text-slate-900">
-      My inquiries
-      {unread > 0 && (
-        <span
-          className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
-          aria-label={`${unread} unread on your inquiries`}
-        >
-          {unread > 99 ? "99+" : unread}
-        </span>
-      )}
-    </Link>
+    <NavBadgeLink
+      to="/classmates"
+      label="Classmates"
+      unread={counts.dms}
+      mobile={mobile}
+      onClick={onClick}
+      ariaSuffix="unread DMs"
+    />
+  );
+}
+
+function MyInquiriesLink({ mobile, onClick }: { mobile: boolean; onClick?: () => void }) {
+  const { counts } = useUnread();
+  return (
+    <NavBadgeLink
+      to="/my-inquiries"
+      label="My inquiries"
+      unread={counts.inquiries}
+      mobile={mobile}
+      onClick={onClick}
+      ariaSuffix="unread on your inquiries"
+    />
   );
 }
 
