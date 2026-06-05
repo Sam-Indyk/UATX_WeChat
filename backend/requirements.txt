@@ -1,13 +1,24 @@
-fastapi==0.115.5
+fastapi>=0.118.0,<0.120
 uvicorn[standard]==0.32.1
 sqlalchemy>=2.0.40,<3
 psycopg[binary]>=3.2.13,<3.4
 alembic==1.14.0
 pydantic>=2.10.3,<3
 pydantic-settings>=2.6.1,<3
-python-jose[cryptography]==3.3.0
+# python-jose 3.3.0 had PYSEC-2024-232 (algorithm confusion) +
+# PYSEC-2024-233 (DoS via JWT decode). 3.4.0 fixes both.
+python-jose[cryptography]>=3.4.0
 httpx==0.28.1
-python-multipart==0.0.20
+# 0.0.20 had three CVEs (denial-of-service via crafted multipart);
+# 0.0.27 is the first version with all three patched.
+python-multipart>=0.0.27
+# Starlette ships via FastAPI. We pin to the highest version compatible
+# with FastAPI 0.118.x (which caps starlette < 0.49), which is 0.48.x.
+# Fixes CVE-2025-54121. CVE-2025-62727 and PYSEC-2026-161 are only
+# patched in 0.49.1+/1.0.1; those require a FastAPI release that
+# hasn't shipped yet. Both unfixed CVEs are in code paths we don't
+# exercise (specific middleware orderings + header-parsing edge cases).
+starlette>=0.48.0,<0.49.0
 stripe>=11.0.0,<13
 
 # Test deps
