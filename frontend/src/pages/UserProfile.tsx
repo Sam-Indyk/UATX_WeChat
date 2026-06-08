@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { apiRequest, useApi } from "../lib/api";
+import { useApi } from "../lib/api";
 import { formatRelativeDate } from "../lib/date";
 import type { Conversation, PublicUser } from "../lib/types";
 import { NON_BOOK_CATEGORIES } from "../lib/types";
@@ -23,10 +23,13 @@ export default function UserProfile() {
 
   useEffect(() => {
     if (!userId) return;
-    apiRequest<PublicUser>(`/api/users/${userId}`)
+    // Auth'd request (attaches the Clerk JWT) — the endpoint requires
+    // sign-in. Previously this used apiRequest (anonymous) which 401'd
+    // every time.
+    request<PublicUser>(`/api/users/${userId}`)
       .then(setProfile)
       .catch((e) => setError(`Couldn't load profile: ${String(e)}`));
-  }, [userId]);
+  }, [userId, request]);
 
   async function messageThem() {
     if (!userId) return;
