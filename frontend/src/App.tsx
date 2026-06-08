@@ -17,6 +17,8 @@ import EverythingElse from "./pages/EverythingElse";
 import NewItem from "./pages/NewItem";
 import UserProfile from "./pages/UserProfile";
 import Feedback from "./pages/Feedback";
+import WordleHub from "./pages/WordleHub";
+import WordleGame from "./pages/WordleGame";
 import NotFound from "./pages/NotFound";
 import Logo from "./components/Logo";
 import { useUnread } from "./hooks/useUnreadCount";
@@ -50,6 +52,8 @@ export default function App() {
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
           <Route path="/users/:userId" element={<RequireAuth><UserProfile /></RequireAuth>} />
           <Route path="/feedback" element={<RequireAuth><Feedback /></RequireAuth>} />
+          <Route path="/wordle" element={<RequireAuth><WordleHub /></RequireAuth>} />
+          <Route path="/wordle/:gameIndex" element={<RequireAuth><WordleGame /></RequireAuth>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
@@ -90,6 +94,7 @@ function Nav() {
           <ClassmatesLink mobile={false} />
           <MyListingsLink mobile={false} />
           <MyInquiriesLink mobile={false} />
+          <Link to="/wordle" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">Wordle</Link>
         </SignedIn>
 
         <div className="ml-auto flex items-center gap-3">
@@ -139,6 +144,7 @@ function Nav() {
               <ClassmatesLink mobile onClick={close} />
               <MyListingsLink mobile onClick={close} />
               <MyInquiriesLink mobile onClick={close} />
+              <MobileLink to="/wordle" onClick={close}>Wordle</MobileLink>
               <hr className="my-1 border-slate-100" />
               <MobileLink to="/settings" onClick={close}>Settings</MobileLink>
             </SignedIn>
