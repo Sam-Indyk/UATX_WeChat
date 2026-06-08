@@ -106,4 +106,4 @@ Stripe works now. I made an error on Railway, typing the letter o instead of the
 
 Rate limiting added after surge of messages from Pierce Crist. 30 messages per 60 second window returning 429 with Retry-After header on violation. Based on user.id instead of IP, because dorm rooms will share NATs, so IP keying would be unfair to the roommates of the perpetrator.
 
-Also after presetation in PR #54, we removed 10/12 CVEs. The other two are starlette CVEs via FastAPI (updating to newer version fixed one CVE).
+Also after presetation in PR #54, we removed 10/12 CVEs. The remaining two are starlette CVEs via FastAPI (updating to newer version fixed one CVE).

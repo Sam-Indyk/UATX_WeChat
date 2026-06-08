@@ -77,7 +77,7 @@ def db() -> Iterator[Session]:
     with _engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE feedback_submissions, messages, conversations, listings, enrollments, courses, users RESTART IDENTITY CASCADE"
+                "TRUNCATE wordle_completions, feedback_submissions, messages, conversations, listings, enrollments, courses, users RESTART IDENTITY CASCADE"
             )
         )
     _reset_rate_limit()
