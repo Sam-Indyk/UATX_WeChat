@@ -128,6 +128,8 @@ export default function EverythingElse() {
                   <span className="capitalize">{l.condition.replace("_", " ")}</span>
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
+                  by <span className="text-slate-600">{l.seller.display_name}</span>
+                  <span className="mx-1">·</span>
                   Posted {formatRelativeDate(l.created_at)}
                 </p>
               </div>

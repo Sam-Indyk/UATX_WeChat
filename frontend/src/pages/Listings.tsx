@@ -170,6 +170,8 @@ export default function Listings() {
                 </div>
               </div>
               <p className="mt-2 text-xs text-slate-400">
+                by <span className="text-slate-600">{l.seller.display_name}</span>
+                <span className="mx-1">·</span>
                 Posted {formatRelativeDate(l.created_at)}
               </p>
             </Link>
