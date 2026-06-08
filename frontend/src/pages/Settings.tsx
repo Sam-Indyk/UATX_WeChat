@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApi } from "../lib/api";
+import { STRIPE_ENABLED } from "../lib/feature-flags";
 import type { User } from "../lib/types";
 
 export default function Settings() {
@@ -162,7 +163,21 @@ export default function Settings() {
           Buyers will see a "Pay with Stripe" button on any listing where you've
           checked Stripe in the payment methods.
         </p>
-        {me.stripe_onboarded ? (
+        {!STRIPE_ENABLED ? (
+          <>
+            <button
+              type="button"
+              disabled
+              className="rounded-md bg-slate-300 px-3 py-1.5 text-slate-600 text-xs font-medium cursor-not-allowed"
+            >
+              Connect with Stripe
+            </button>
+            <p className="mt-2 text-xs text-slate-500">
+              In-app Stripe payments are coming soon. For now, arrange payments
+              with the buyer directly (cash, Venmo, Zelle, PayPal).
+            </p>
+          </>
+        ) : me.stripe_onboarded ? (
           <div className="flex items-center gap-2 text-sm text-emerald-700">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
             Connected. You can accept Stripe payments.

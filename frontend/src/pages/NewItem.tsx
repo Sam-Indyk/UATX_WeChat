@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApi } from "../lib/api";
 import type { Condition, Listing, ListingCategory, PaymentMethod } from "../lib/types";
 import { NON_BOOK_CATEGORIES, PAYMENT_METHODS } from "../lib/types";
+import { STRIPE_ENABLED } from "../lib/feature-flags";
 
 const CONDITIONS: Condition[] = ["new", "like_new", "good", "fair", "poor"];
 
@@ -165,34 +166,50 @@ export default function NewItem() {
 
       <Field label="Payment methods accepted">
         <p className="text-xs text-slate-600 mb-2">
-          Only <span className="font-medium">Stripe</span> is processed in-app —
-          buyers can pay through Stripe's hosted checkout and we route the money
-          to your connected account. For the others, you'll arrange the transfer
-          with the buyer yourself once you've matched in chat.
+          {STRIPE_ENABLED ? (
+            <>
+              Only <span className="font-medium">Stripe</span> is processed in-app —
+              buyers can pay through Stripe's hosted checkout and we route the money
+              to your connected account. For the others, you'll arrange the transfer
+              with the buyer yourself once you've matched in chat.
+            </>
+          ) : (
+            <>You'll arrange the transfer with the buyer yourself once you've matched in chat. (In-app Stripe payments are coming soon.)</>
+          )}
         </p>
         <div className="flex flex-col gap-1.5">
-          {PAYMENT_METHODS.map((pm) => (
-            <label
-              key={pm.value}
-              className="inline-flex items-center gap-2 text-sm cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={paymentMethods.includes(pm.value)}
-                onChange={() => togglePaymentMethod(pm.value)}
-              />
-              <span>{pm.label}</span>
-              {pm.in_app ? (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
-                  Processed in-app
-                </span>
-              ) : (
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                  Arrange with buyer
-                </span>
-              )}
-            </label>
-          ))}
+          {PAYMENT_METHODS.map((pm) => {
+            const disabled = pm.value === "stripe" && !STRIPE_ENABLED;
+            return (
+              <label
+                key={pm.value}
+                className={`inline-flex items-center gap-2 text-sm ${
+                  disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={paymentMethods.includes(pm.value) && !disabled}
+                  onChange={() => !disabled && togglePaymentMethod(pm.value)}
+                  disabled={disabled}
+                />
+                <span>{pm.label}</span>
+                {disabled ? (
+                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                    Coming soon
+                  </span>
+                ) : pm.in_app ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+                    Processed in-app
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                    Arrange with buyer
+                  </span>
+                )}
+              </label>
+            );
+          })}
         </div>
         <span className="block text-xs text-slate-500 mt-2">
           Optional. Pick any combination.
