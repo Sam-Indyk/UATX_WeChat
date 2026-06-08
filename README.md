@@ -109,3 +109,5 @@ Rate limiting added after surge of messages from Pierce Crist. 30 messages per 6
 Also after the presetation in PR #54, we removed 10/12 CVEs. The remaining two are starlette CVEs via FastAPI (updating to newer version fixed one CVE).
 
 Another feature added post-presentatio in PR #55. UATX Wordle! 20 games of Wordle are available to be played as of PR #55. Eventually, we will have it so new games cycle in every day, but now YOU get to learn the UATX jargon!
+
+PR 56 lists the seller's name on the item card and resolves user profile API 401 error caused by a recent push.
