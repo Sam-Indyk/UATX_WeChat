@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import and_, case, desc, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth import require_user
+from app.auth import is_admin, require_user
 from app.db import get_db
 from app.models import Conversation, Enrollment, Listing, Message, User
 from app.schemas.common import (
@@ -25,6 +25,10 @@ router = APIRouter(prefix="/api/me", tags=["me"])
 
 @router.get("", response_model=UserOut)
 def get_me(user: User = Depends(require_user)) -> User:
+    # Stamp the computed is_admin attribute on the SQLAlchemy row so
+    # Pydantic's from_attributes serialization picks it up. Same trick
+    # we use for unread_count on listings / conversations.
+    user.is_admin = is_admin(user)
     return user
 
 

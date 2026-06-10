@@ -16,6 +16,12 @@ class UserOut(BaseModel):
     # account can charge). Drives whether the "Pay with Stripe" button
     # shows on this user's listings. Not sensitive — it's just a flag.
     stripe_onboarded: bool = False
+    # True if this user's email is in the ADMIN_EMAILS env-var allowlist.
+    # Driven by config (not a DB column) — recomputed on each request.
+    # Populated only by the /api/me endpoint; defaults to False on all
+    # other UserOut embeddings (we don't leak admin status across the
+    # API surface).
+    is_admin: bool = False
 
 
 class MeUpdate(BaseModel):
@@ -211,6 +217,21 @@ class FeedbackOut(BaseModel):
     category: FeedbackCategory
     body: str
     created_at: datetime
+
+
+class FeedbackSubmissionAdminOut(BaseModel):
+    """Like FeedbackOut, but with the submitter joined in so the admin
+    dashboard can show who said what. user_email + user_display_name are
+    optional because user_id has ON DELETE SET NULL — feedback survives
+    its author."""
+
+    id: uuid.UUID
+    category: FeedbackCategory
+    body: str
+    created_at: datetime
+    user_id: str | None
+    user_email: str | None
+    user_display_name: str | None
 
 
 class PublicUserOut(BaseModel):
