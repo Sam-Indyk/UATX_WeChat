@@ -23,7 +23,7 @@ export default function Home() {
             to="/sign-in"
             className="inline-block rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
           >
-            Sign in with your UATX Google →
+            Sign in with your UATX Google Account→
           </Link>
         </SignedOut>
         <SignedIn>
@@ -48,21 +48,21 @@ export default function Home() {
       <section className="grid gap-4 sm:grid-cols-3 max-w-4xl mx-auto">
         <FeatureCard
           title="Matched to your courses"
-          body="List the classes you're in, and we surface listings from students who took those same courses — sorted by who took them most recently, so you get the current edition."
+          body="List the classes you're in, and we surface listings from students who took those same courses. Sorted by who took them most recently."
         />
         <FeatureCard
-          title="Chat in real-time"
-          body="Message sellers in the app and arrange the handoff. Threads update live, with read receipts and per-conversation unread badges."
+          title="Live chat"
+          body="Message sellers in the app and arrange the handoff. Threads update live."
         />
         <FeatureCard
           title="More than textbooks"
-          body="Furniture, electronics, kitchen gear, sports equipment — anything UATX students would sell to each other lives in Everything Else."
+          body="Check out 'Everything else' to see non-books! Some of the posts and kinda silly."
         />
       </section>
 
       {/* Small footnote with project context */}
       <p className="text-center text-xs text-slate-400">
-        Built for UATX students. A 3-week final project for Software Engineering, Spring 2026.
+        Built for UATX students by UATX student Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
         <SignedIn>
           {" · "}
           <Link to="/feedback" className="underline hover:text-slate-600">
