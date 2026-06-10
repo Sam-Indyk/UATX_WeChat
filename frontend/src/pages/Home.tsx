@@ -11,7 +11,7 @@ export default function Home() {
           <Logo size={96} className="text-amber-600" />
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-          Your marketplace for books and everything else.
+          The UATX marketplace for books and everything else.
         </h1>
         <SignedOut>
           <Link
