@@ -14,7 +14,7 @@ export default function Home() {
           Textbooks from the students<br className="hidden sm:inline" /> who took your class.
         </h1>
         <p className="text-lg text-slate-600 max-w-prose mx-auto">
-          UATX_WeChat is your maketplace for books buying and selling books and everything else!
+          UATX_WeChat is your marketplace for buying and selling books and everything else!
         </p>
         <SignedIn>
           <Link
