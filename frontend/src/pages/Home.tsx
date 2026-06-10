@@ -30,10 +30,10 @@ export default function Home() {
               Got an idea?
             </Link>
             <Link
-              to="/match"
+              to="/listings?mine=1"
               className="rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
             >
-              See books for my courses
+              See books
             </Link>
             <Link
               to="/listings"

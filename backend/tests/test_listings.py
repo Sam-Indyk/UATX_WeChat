@@ -67,6 +67,54 @@ def test_list_listings_filters_by_search_query(client, course, db: Session) -> N
     assert len(rows) == 3
 
 
+def test_list_listings_my_courses_filters_to_enrollments(client, course, db: Session) -> None:
+    """?my_courses=true filters to listings whose course is in the
+    viewer's current OR upcoming enrollments. Past enrollments don't
+    count — you don't need books for classes you've already finished.
+    Anonymous requests get 401 (because of the auth override in the
+    test client, this means we exercise the auth path via the override).
+    """
+    from app.models import Enrollment
+    me = client.current_user
+
+    # Two courses. I'm enrolled in `course` (current); not in the other.
+    other_course = Course(id=uuid.uuid4(), code="MATH 201", title="Calculus I")
+    db.add(other_course)
+    db.add(Enrollment(
+        id=uuid.uuid4(), user_id=me.id, course_id=course.id,
+        term="Spring 2026", kind="current",
+    ))
+    db.commit()
+
+    client.post("/api/listings", json=_payload(course.id, title="My Class Book"))
+    client.post("/api/listings", json=_payload(other_course.id, title="Other Book"))
+
+    r = client.get("/api/listings?my_courses=true")
+    assert r.status_code == 200, r.text
+    titles = [row["title"] for row in r.json()]
+    assert titles == ["My Class Book"]
+
+
+def test_list_listings_my_courses_excludes_past_enrollments(client, course, db: Session) -> None:
+    """A class I took in the past doesn't surface — I don't need its
+    books anymore."""
+    from app.models import Enrollment
+    db.add(Enrollment(
+        id=uuid.uuid4(), user_id=client.current_user.id, course_id=course.id,
+        term="Fall 2024", kind="past",
+    ))
+    db.commit()
+    client.post("/api/listings", json=_payload(course.id, title="Old Class Book"))
+
+    r = client.get("/api/listings?my_courses=true")
+    assert r.json() == []
+
+
+def test_list_listings_my_courses_anon_401(anon_client) -> None:
+    r = anon_client.get("/api/listings?my_courses=true")
+    assert r.status_code == 401
+
+
 def test_list_listings_search_escapes_like_wildcards(client, course, db: Session) -> None:
     """A user typing '%' or '_' shouldn't get regex-like behavior — the
     server escapes those before passing to ILIKE."""

@@ -169,3 +169,23 @@ def require_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+def get_optional_user(
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Like require_user, but returns None for unauthenticated requests
+    instead of raising 401. Lets an endpoint serve both anonymous and
+    authenticated callers, branching on the result.
+
+    Overridden in tests the same way require_user is (see conftest.py)
+    so tests don't have to construct real JWTs."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    claims = _verify_clerk_jwt(token)
+    user = _upsert_user(db, claims)
+    db.commit()
+    db.refresh(user)
+    return user
