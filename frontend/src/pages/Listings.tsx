@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SignedIn } from "@clerk/clerk-react";
-import { apiRequest } from "../lib/api";
+import { apiRequest, useApi } from "../lib/api";
 import CourseSearchPicker from "../components/CourseSearchPicker";
 import { formatRelativeDate } from "../lib/date";
 import type { Course, Listing } from "../lib/types";
@@ -16,9 +16,14 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 
 export default function Listings() {
   const [params, setParams] = useSearchParams();
+  const { request } = useApi();
   const courseFilter = params.get("course_id") ?? "";
   const queryParam = params.get("q") ?? "";
   const sortParam = (params.get("sort") as SortOption) || "newest";
+  // ?mine=1 → backend filters to listings whose course is in the
+  // viewer's current/upcoming enrollments. Replaces the old /match
+  // route as a filter on this page instead of its own tab.
+  const myCoursesOnly = params.get("mine") === "1";
 
   // Mirror the URL ?q= into a local input value so typing feels instant
   // without writing to the URL on every keystroke. We push to the URL
@@ -53,10 +58,15 @@ export default function Listings() {
     const qs = new URLSearchParams({ category: "book" });
     if (courseFilter) qs.set("course_id", courseFilter);
     if (queryParam) qs.set("q", queryParam);
-    apiRequest<Listing[]>(`/api/listings?${qs.toString()}`)
+    if (myCoursesOnly) qs.set("my_courses", "true");
+    // my_courses needs the Clerk JWT (backend 401s without it). Use
+    // the auth'd helper when filtering by mine; fall back to the
+    // anonymous helper otherwise so signed-out users can browse.
+    const fetcher = myCoursesOnly ? request : apiRequest;
+    fetcher<Listing[]>(`/api/listings?${qs.toString()}`)
       .then(setListings)
       .catch((e) => setError(`Couldn't load listings: ${String(e)}`));
-  }, [courseFilter, queryParam]);
+  }, [courseFilter, queryParam, myCoursesOnly, request]);
 
   // Frontend-side sort. The backend already orders by created_at desc,
   // so "newest" is a no-op. Price sorts are in-memory — cheap at any
@@ -79,6 +89,13 @@ export default function Listings() {
     setParams(next, { replace: true });
   }
 
+  function toggleMyCourses() {
+    const next = new URLSearchParams(params);
+    if (myCoursesOnly) next.delete("mine");
+    else next.set("mine", "1");
+    setParams(next, { replace: true });
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -94,7 +111,7 @@ export default function Listings() {
       </div>
 
       {/* Filters row */}
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center">
         <input
           type="search"
           value={searchInput}
@@ -126,6 +143,20 @@ export default function Listings() {
             </option>
           ))}
         </select>
+        <SignedIn>
+          <button
+            type="button"
+            onClick={toggleMyCourses}
+            className={
+              myCoursesOnly
+                ? "rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 whitespace-nowrap"
+                : "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+            }
+            aria-pressed={myCoursesOnly}
+          >
+            {myCoursesOnly ? "✓ My courses" : "My courses"}
+          </button>
+        </SignedIn>
       </div>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
@@ -133,11 +164,13 @@ export default function Listings() {
       {sortedListings && sortedListings.length === 0 && !error && (
         <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
           <p className="text-slate-600">
-            {queryParam || courseFilter
-              ? "No listings match your filters."
+            {queryParam || courseFilter || myCoursesOnly
+              ? myCoursesOnly && !queryParam && !courseFilter
+                ? "No books match courses you're enrolled in. Add your classes in My classes, or browse all listings."
+                : "No listings match your filters."
               : "No book listings yet — be the first to sell one."}
           </p>
-          {(queryParam || courseFilter) && (
+          {(queryParam || courseFilter || myCoursesOnly) && (
             <button
               type="button"
               onClick={() => setParams({}, { replace: true })}

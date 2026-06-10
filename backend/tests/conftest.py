@@ -25,7 +25,7 @@ os.environ.setdefault(
 )
 os.environ.setdefault("APP_ENV", "test")
 
-from app.auth import require_user  # noqa: E402
+from app.auth import get_optional_user, require_user  # noqa: E402
 from app.db import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import User  # noqa: E402
@@ -125,6 +125,7 @@ def client(db: Session, make_user) -> Iterator[TestClient]:
 
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[require_user] = _override_require_user
+    app.dependency_overrides[get_optional_user] = _override_require_user
 
     with TestClient(app) as c:
         c.current_user = current  # type: ignore[attr-defined]
@@ -133,6 +134,7 @@ def client(db: Session, make_user) -> Iterator[TestClient]:
             nonlocal current
             current = user
             app.dependency_overrides[require_user] = lambda: current
+            app.dependency_overrides[get_optional_user] = lambda: current
             c.current_user = current  # type: ignore[attr-defined]
 
         c.set_user = _set_user  # type: ignore[attr-defined]

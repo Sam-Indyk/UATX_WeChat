@@ -90,7 +90,6 @@ function Nav() {
         <Link to="/everything-else" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">Everything else</Link>
         <SignedIn>
           <Link to="/my-classes" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">My classes</Link>
-          <Link to="/match" className="hidden md:inline whitespace-nowrap text-sm text-slate-600 hover:text-slate-900">For my courses</Link>
           <ClassmatesLink mobile={false} />
           <MyListingsLink mobile={false} />
           <MyInquiriesLink mobile={false} />
@@ -140,7 +139,6 @@ function Nav() {
             <MobileLink to="/everything-else" onClick={close}>Everything else</MobileLink>
             <SignedIn>
               <MobileLink to="/my-classes" onClick={close}>My classes</MobileLink>
-              <MobileLink to="/match" onClick={close}>For my courses</MobileLink>
               <ClassmatesLink mobile onClick={close} />
               <MyListingsLink mobile onClick={close} />
               <MyInquiriesLink mobile onClick={close} />

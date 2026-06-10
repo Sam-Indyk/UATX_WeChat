@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth import require_user
+from app.auth import get_optional_user, require_user
 from app.db import get_db
-from app.models import Conversation, Listing, Message, User
+from app.models import Conversation, Enrollment, Listing, Message, User
 from app.schemas.common import ConversationOut, ListingCreate, ListingOut, ListingUpdate
 from app.storage import (
     ALLOWED_CONTENT_TYPES,
@@ -25,20 +25,19 @@ def list_listings(
     category: str | None = Query(default=None),
     status_: str = Query(default="active", alias="status"),
     q: str | None = Query(default=None, max_length=200),
+    my_courses: bool = Query(default=False),
+    viewer: User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ) -> list[Listing]:
     """Browse listings.
 
     - `?category=book` → Browse page (books only).
-    - `?category=furniture,electronics,...` → not supported in this PR;
-      Everything Else filters with `?category=non-book` (a sentinel)
-      OR client passes a single non-book category at a time. The
-      simplest server semantics: if `category` is the literal string
-      `non-book`, exclude books; otherwise filter to that exact value.
-      Falls back to "all categories" when omitted (used by My Listings).
+    - `?category=non-book` → Everything Else (excludes books, image-required).
     - `?q=<term>` → case-insensitive substring match on title OR author.
-      Used by the Books browse search box. Capped at 200 chars to keep
-      pathological queries out.
+    - `?my_courses=true` → filter to listings whose course is in the
+      signed-in viewer's current or upcoming enrollments. Requires auth
+      (401 if no token). Lets the Books page show "books in my classes"
+      without a dedicated route.
     """
     stmt = (
         select(Listing)
@@ -65,6 +64,31 @@ def list_listings(
             Listing.title.ilike(pattern, escape="\\")
             | Listing.author.ilike(pattern, escape="\\")
         )
+    if my_courses:
+        # Optional auth: anonymous browse is fine for everything else,
+        # but my_courses needs to know who's asking.
+        if viewer is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Sign in to filter by your courses.",
+            )
+        # Filter to listings whose course is in the viewer's current OR
+        # upcoming enrollments (the courses they actually need books for
+        # right now). Past enrollments don't count — you don't need a
+        # book for a class you've already finished.
+        course_ids = list(
+            db.execute(
+                select(Enrollment.course_id)
+                .where(
+                    Enrollment.user_id == viewer.id,
+                    Enrollment.kind.in_(("current", "upcoming")),
+                )
+                .distinct()
+            ).scalars()
+        )
+        if not course_ids:
+            return []
+        stmt = stmt.where(Listing.course_id.in_(course_ids))
     return list(db.execute(stmt).scalars().all())
 
 

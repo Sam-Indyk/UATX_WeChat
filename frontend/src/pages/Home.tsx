@@ -11,32 +11,33 @@ export default function Home() {
           <Logo size={96} className="text-amber-600" />
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-          Textbooks from the students<br className="hidden sm:inline" /> who took your class.
+          The UATX marketplace for books and everything else.
         </h1>
-        <p className="text-lg text-slate-600 max-w-prose mx-auto">
-          UATX_WeChat matches you with upperclassmen who already passed the courses
-          you're in. Same edition, half the price, no shipping — and there's a
-          general marketplace for everything else.
-        </p>
         <SignedOut>
           <Link
             to="/sign-in"
             className="inline-block rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
           >
-            Sign in with your UATX Google Account→
+            Sign in with your UATX Google Account
           </Link>
         </SignedOut>
         <SignedIn>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
-              to="/match"
+              to="/feedback"
               className="rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
             >
-              See books for my courses →
+              Got an idea?
+            </Link>
+            <Link
+              to="/listings?mine=1"
+              className="rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
+            >
+              See books
             </Link>
             <Link
               to="/listings"
-              className="rounded-lg border border-slate-300 bg-white px-6 py-3 text-base font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
             >
               Browse all listings
             </Link>
@@ -60,15 +61,9 @@ export default function Home() {
         />
       </section>
 
-      {/* Small footnote with project context */}
+      {/* Project credit footnote */}
       <p className="text-center text-xs text-slate-400">
-        Built for UATX students by UATX student Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
-        <SignedIn>
-          {" · "}
-          <Link to="/feedback" className="underline hover:text-slate-600">
-            Got an idea? →
-          </Link>
-        </SignedIn>
+        Built for UATX students by UATX students Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
       </p>
     </div>
   );
