@@ -11,38 +11,33 @@ export default function Home() {
           <Logo size={96} className="text-amber-600" />
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-          Textbooks from the students<br className="hidden sm:inline" /> who took your class.
+          Your marketplace for buying and selling books and everything else!
         </h1>
-        <p className="text-lg text-slate-600 max-w-prose mx-auto">
-          UATX_WeChat is your marketplace for buying and selling books and everything else!
-        </p>
-        <SignedIn>
-          <Link
-            to="/feedback"
-            className="inline-block rounded-lg bg-amber-600 px-5 py-2.5 text-white text-sm font-semibold hover:bg-amber-700 shadow-sm"
-          >
-            Got an idea? →
-          </Link>
-        </SignedIn>
         <SignedOut>
           <Link
             to="/sign-in"
             className="inline-block rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
           >
-            Sign in with your UATX Google Account→
+            Sign in with your UATX Google Account
           </Link>
         </SignedOut>
         <SignedIn>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
+              to="/feedback"
+              className="rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
+            >
+              Got an idea?
+            </Link>
+            <Link
               to="/match"
               className="rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
             >
-              See books for my courses →
+              See books for my courses
             </Link>
             <Link
               to="/listings"
-              className="rounded-lg border border-slate-300 bg-white px-6 py-3 text-base font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg bg-amber-600 px-6 py-3 text-white text-base font-semibold hover:bg-amber-700 shadow-sm"
             >
               Browse all listings
             </Link>
