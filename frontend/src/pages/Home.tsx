@@ -60,16 +60,20 @@ export default function Home() {
         />
       </section>
 
-      {/* Small footnote with project context */}
-      <p className="text-center text-xs text-slate-400">
-        Built for UATX students by UATX student Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
+      {/* Feedback CTA + project credit footnote */}
+      <div className="text-center space-y-4">
         <SignedIn>
-          {" · "}
-          <Link to="/feedback" className="underline hover:text-slate-600">
+          <Link
+            to="/feedback"
+            className="inline-block rounded-lg bg-amber-600 px-5 py-2.5 text-white text-sm font-semibold hover:bg-amber-700 shadow-sm"
+          >
             Got an idea? →
           </Link>
         </SignedIn>
-      </p>
+        <p className="text-xs text-slate-400">
+          Built for UATX students by UATX student Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
+        </p>
+      </div>
     </div>
   );
 }
