@@ -63,7 +63,7 @@ export default function Home() {
 
       {/* Project credit footnote */}
       <p className="text-center text-xs text-slate-400">
-        Built for UATX students by UATX student Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
+        Built for UATX students by UATX students Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
       </p>
     </div>
   );
