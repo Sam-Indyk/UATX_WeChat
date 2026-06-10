@@ -169,3 +169,23 @@ def require_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+def is_admin(user: User) -> bool:
+    """True if the user's email is in the ADMIN_EMAILS env-var allowlist.
+    Used both for the response on /api/me (so the frontend can show/hide
+    admin UI) and by `require_admin` to gate admin-only endpoints."""
+    if not user.email:
+        return False
+    return user.email.lower() in settings.admin_emails_list
+
+
+def require_admin(user: User = Depends(require_user)) -> User:
+    """Dependency: like require_user, but also 403s if the caller isn't
+    in the admin allowlist."""
+    if not is_admin(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return user

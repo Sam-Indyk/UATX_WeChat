@@ -265,6 +265,24 @@ export default function Settings() {
           Submit feedback →
         </Link>
       </section>
+
+      {me.is_admin && (
+        <>
+          <hr />
+          <section>
+            <h2 className="text-sm font-semibold mb-2">Admin</h2>
+            <p className="text-xs text-slate-500 mb-3">
+              Only you and the other admins see this. Read incoming user feedback.
+            </p>
+            <Link
+              to="/admin/feedback"
+              className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Open feedback inbox →
+            </Link>
+          </section>
+        </>
+      )}
     </section>
   );
 }

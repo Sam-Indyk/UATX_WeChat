@@ -40,9 +40,19 @@ class Settings(BaseSettings):
     # 0 = no platform fee. The demo uses 0 — we're not collecting money.
     STRIPE_PLATFORM_FEE_BPS: int = 0
 
+    # Comma-separated list of admin emails. Anyone whose Clerk-verified
+    # email matches an entry here gets access to /api/admin/* endpoints
+    # and the /admin/feedback page in the UI. Default is the two team
+    # members; override via env var if the team changes.
+    ADMIN_EMAILS: str = "ezarin@student.uaustin.org,sindyk@student.uaustin.org"
+
     @property
     def allowed_domains_list(self) -> list[str]:
         return [d.strip().lower() for d in self.ALLOWED_EMAIL_DOMAINS.split(",") if d.strip()]
+
+    @property
+    def admin_emails_list(self) -> list[str]:
+        return [e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
 
     @property
     def stripe_enabled(self) -> bool:

@@ -7,6 +7,20 @@ export type User = {
   // account can charge). Drives whether "Pay with Stripe" appears on
   // listings they're selling.
   stripe_onboarded: boolean;
+  // True if this user's email is in the backend's ADMIN_EMAILS
+  // allowlist. Populated by GET /api/me; defaults to false on any
+  // other User payload (we don't expose admin status across the API).
+  is_admin: boolean;
+};
+
+export type FeedbackSubmissionAdmin = {
+  id: string;
+  category: "feature" | "bug" | "other";
+  body: string;
+  created_at: string;
+  user_id: string | null;
+  user_email: string | null;
+  user_display_name: string | null;
 };
 
 export type Course = {
