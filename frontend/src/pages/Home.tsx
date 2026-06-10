@@ -14,10 +14,16 @@ export default function Home() {
           Textbooks from the students<br className="hidden sm:inline" /> who took your class.
         </h1>
         <p className="text-lg text-slate-600 max-w-prose mx-auto">
-          UATX_WeChat matches you with upperclassmen who already passed the courses
-          you're in. Same edition, half the price, no shipping — and there's a
-          general marketplace for everything else.
+          UATX_WeChat is your maketplace for books buying and selling books and everything else!
         </p>
+        <SignedIn>
+          <Link
+            to="/feedback"
+            className="inline-block rounded-lg bg-amber-600 px-5 py-2.5 text-white text-sm font-semibold hover:bg-amber-700 shadow-sm"
+          >
+            Got an idea? →
+          </Link>
+        </SignedIn>
         <SignedOut>
           <Link
             to="/sign-in"
@@ -60,20 +66,10 @@ export default function Home() {
         />
       </section>
 
-      {/* Feedback CTA + project credit footnote */}
-      <div className="text-center space-y-4">
-        <SignedIn>
-          <Link
-            to="/feedback"
-            className="inline-block rounded-lg bg-amber-600 px-5 py-2.5 text-white text-sm font-semibold hover:bg-amber-700 shadow-sm"
-          >
-            Got an idea? →
-          </Link>
-        </SignedIn>
-        <p className="text-xs text-slate-400">
-          Built for UATX students by UATX student Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
-        </p>
-      </div>
+      {/* Project credit footnote */}
+      <p className="text-center text-xs text-slate-400">
+        Built for UATX students by UATX student Samuel Indyk and Eitan Zarin. SWE Final Project Spring 2026.
+      </p>
     </div>
   );
 }
