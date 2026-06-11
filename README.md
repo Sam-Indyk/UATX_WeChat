@@ -122,3 +122,4 @@ PR 60: Got an idea link is very visible at the center of the home page, so we ca
 
 PR 61: get_optional_user was running JWT verify + upsert + commit + refresh on every /api/listings hit for signed-in users (3 DB rountrips per browse, taking 100ms on Supabase). My listings also allows for seel something else in addition to the sell a book option, which has been there for a while.
 
+PR 62: Intructions for Claude Code on personal account, as UATX Claude will be removed for SWE class students around June 12. 
