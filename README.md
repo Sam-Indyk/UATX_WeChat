@@ -111,3 +111,14 @@ Also after the presetation in PR #54, we removed 10/12 CVEs. The remaining two a
 Another feature added post-presentatio in PR #55. UATX Wordle! 20 games of Wordle are available to be played as of PR #55. Eventually, we will have it so new games cycle in every day, but now YOU get to learn the UATX jargon!
 
 PR 56 lists the seller's name on the item card and resolves user profile API 401 error caused by a recent push.
+
+PR 57: UATX only signups, clear all book listings for official launch within UATX.
+
+PR 58: Visual changes to home page
+
+PR 59: Admit emails for Eitan and Samuel to review the suggestion forms. Added 5 backend tests.
+
+PR 60: Got an idea link is very visible at the center of the home page, so we can get suggestions as we grow the site. Also, no more "For My Classes" tab. Now a search feature under the Books tab. Reducing the number of tabs is a goal for future pull requests. 
+
+PR 61: get_optional_user was running JWT verify + upsert + commit + refresh on every /api/listings hit for signed-in users (3 DB rountrips per browse, taking 100ms on Supabase). My listings also allows for seel something else in addition to the sell a book option, which has been there for a while.
+
