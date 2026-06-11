@@ -179,13 +179,21 @@ def get_optional_user(
     instead of raising 401. Lets an endpoint serve both anonymous and
     authenticated callers, branching on the result.
 
+    Critically lighter than require_user: this is called on every hit
+    of endpoints like /api/listings (which signed-in users hit on every
+    browse). So we skip the upsert / commit / refresh path and just do
+    JWT verify + a single PK lookup. If the user row doesn't exist yet
+    (very rare — would only happen on the first request right after
+    sign-up if it isn't /api/me), we return None and the caller treats
+    them as anon.
+
     Overridden in tests the same way require_user is (see conftest.py)
     so tests don't have to construct real JWTs."""
     if not authorization or not authorization.lower().startswith("bearer "):
         return None
     token = authorization.split(" ", 1)[1].strip()
     claims = _verify_clerk_jwt(token)
-    user = _upsert_user(db, claims)
-    db.commit()
-    db.refresh(user)
-    return user
+    user_id = claims.get("sub")
+    if not user_id:
+        return None
+    return db.get(User, user_id)

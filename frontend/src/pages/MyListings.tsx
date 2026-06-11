@@ -46,8 +46,10 @@ export default function MyListings() {
   if (!listings) return <p className="text-slate-500">Loading…</p>;
 
   const visible = tab === "books" ? books : items;
+  // The tab-specific link is only used by the empty-state "Post one →"
+  // shortcut; the page header now shows both create-listing buttons
+  // unconditionally.
   const sellLink = tab === "books" ? "/listings/new" : "/everything-else/new";
-  const sellLabel = tab === "books" ? "+ Sell a book" : "+ List something";
   const emptyMsg =
     tab === "books"
       ? "You haven't posted any book listings yet."
@@ -57,12 +59,20 @@ export default function MyListings() {
     <section className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">My listings</h1>
-        <Link
-          to={sellLink}
-          className="rounded-md bg-amber-600 px-3 py-1.5 text-white text-sm font-medium hover:bg-amber-700"
-        >
-          {sellLabel}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/listings/new"
+            className="rounded-md bg-amber-600 px-3 py-1.5 text-white text-sm font-medium hover:bg-amber-700"
+          >
+            + Sell a book
+          </Link>
+          <Link
+            to="/everything-else/new"
+            className="rounded-md bg-amber-600 px-3 py-1.5 text-white text-sm font-medium hover:bg-amber-700"
+          >
+            + Sell something else
+          </Link>
+        </div>
       </header>
 
       <nav className="border-b border-slate-200 flex gap-2 text-sm overflow-x-auto">
