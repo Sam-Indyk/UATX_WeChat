@@ -57,7 +57,7 @@ export default function Home() {
         />
         <FeatureCard
           title="More than textbooks"
-          body="Check out 'Everything else' to see non-books! Some of the posts and kinda silly."
+          body="Check out 'Everything else' to see non-books! Some of the posts are kinda silly."
         />
       </section>
 
